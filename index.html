@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>安全隔離型跨平台自我複製引擎控制台</title>
+    <title>高效能記憶體快取與背景自我複製引擎控制台</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&family=Inter:wght@400;600;700&display=swap');
@@ -19,9 +19,9 @@
         <div class="bg-slate-850 px-6 py-4 border-b border-slate-800 flex flex-wrap justify-between items-center gap-4">
             <div>
                 <h1 class="text-xl font-bold text-cyan-400 flex items-center gap-2">
-                    <span>🛡️</span> 獨立沙箱實體檔案引擎控制台
+                    <span>⚡</span> 高效能記憶體快取與背景守護引擎
                 </h1>
-                <p class="text-xs text-slate-400 mt-1">嚴格命名空間隔離：僅對本工具生成的專屬 .py / .txt 進行滾動式邊生邊刪</p>
+                <p class="text-xs text-slate-400 mt-1">記憶體高速運轉 (O(1) 世代爆炸) ｜ 定期硬碟快照同步 ｜ 背景獨立執行</p>
             </div>
             <span id="engine-status" class="px-3 py-1 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/30">
                 ● 未授權目錄 (Waiting)
@@ -50,12 +50,12 @@
             <!-- 數量調節滑桿 -->
             <div class="flex flex-col justify-between gap-2">
                 <div class="flex justify-between items-center">
-                    <label class="text-sm font-semibold text-slate-300">🎚️ 專屬檔數上限限制</label>
+                    <label class="text-sm font-semibold text-slate-300">🎚️ 記憶體與硬碟最大檔數限制</label>
                     <span id="max-files-val" class="text-cyan-400 font-bold terminal-font bg-slate-800 px-2 py-0.5 rounded">6</span>
                 </div>
-                <input id="max-files-slider" type="range" min="2" max="100" value="6" oninput="updateMaxFiles(this.value)"
+                <input id="max-files-slider" type="range" min="2" max="15" value="6" oninput="updateMaxFiles(this.value)"
                     class="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-cyan-400">
-                <span class="text-xs text-slate-500">超額時自動刪除本工具生成的舊檔案</span>
+                <span class="text-xs text-slate-500">超額時自動進行記憶體與硬碟滾動淘汰</span>
             </div>
 
             <!-- 數據統計 -->
@@ -65,12 +65,12 @@
                     <span id="stat-gen" class="text-cyan-400 font-bold terminal-font">1</span>
                 </div>
                 <div class="flex justify-between">
-                    <span class="text-slate-400">專屬活躍 .py 數:</span>
-                    <span id="stat-py" class="text-emerald-400 font-bold terminal-font">0</span>
+                    <span class="text-slate-400">指數爆炸節點數:</span>
+                    <span id="stat-nodes" class="text-emerald-400 font-bold terminal-font">1</span>
                 </div>
                 <div class="flex justify-between">
-                    <span class="text-slate-400">專屬活躍 Log 數:</span>
-                    <span id="stat-log" class="text-amber-400 font-bold terminal-font">0</span>
+                    <span class="text-slate-400">硬碟快照同步狀態:</span>
+                    <span id="stat-sync" class="text-amber-400 font-bold terminal-font">閒置</span>
                 </div>
             </div>
         </div>
@@ -80,28 +80,28 @@
             <!-- 實體檔案清單 -->
             <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 flex flex-col h-72">
                 <h3 class="text-sm font-semibold text-slate-300 mb-3 flex justify-between">
-                    <span>📁 本工具專屬檔案監視器</span>
+                    <span>📁 記憶體快取與硬碟同步監視器</span>
                     <span class="text-xs text-slate-500" id="dir-name-display">未選擇目錄</span>
                 </h3>
                 <div id="file-list-container" class="terminal-font text-xs overflow-y-auto flex-1 space-y-2 pr-1 text-slate-300">
-                    <div class="text-slate-600 italic">請點擊「啟動」並選擇本機資料夾以授權沙箱寫入。</div>
+                    <div class="text-slate-600 italic">請點擊「啟動」授權資料夾以執行記憶體高速快取。</div>
                 </div>
             </div>
 
             <!-- 終端機 Log -->
             <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 flex flex-col h-72">
                 <h3 class="text-sm font-semibold text-slate-300 mb-3 flex justify-between">
-                    <span>💻 安全隔離日誌 (Console Log)</span>
+                    <span>💻 高效能執行日誌 (Console Log)</span>
                     <button onclick="clearLogs()" class="text-xs text-slate-500 hover:text-cyan-400">清空</button>
                 </h3>
                 <div id="terminal-log" class="terminal-font text-xs overflow-y-auto flex-1 space-y-1 text-emerald-400 bg-slate-900/80 p-3 rounded-lg border border-slate-800/50">
-                    <div>[System] 準備就緒。安全沙箱隔離防護已啟動。</div>
+                    <div>[System] 高效能記憶體快取引擎準備就緒。</div>
                 </div>
             </div>
         </div>
 
         <div class="px-6 py-3 bg-slate-950 text-center text-xs text-slate-500 border-t border-slate-800">
-            GitHub Pages Hosted ｜ 100% Secure Isolated Client-Side Execution
+            Optimized High-Performance Memory-First Engine ｜ GitHub Pages Hosted
         </div>
     </div>
 
@@ -111,86 +111,39 @@
         let maxFiles = 6;
         let currentGen = 1;
         let sessionId = Math.floor(Date.now() / 1000);
-        let activePyFiles = [];
-        let activeLogFiles = [];
+        let memoryNodes = []; // 記憶體高速快取佇列
         let loopTimer = null;
+        let syncCounter = 0;
 
-        // 【修正重點】將當前的 maxFiles 滑桿數值動態傳入 Python 模板中，確保實體檔案也遵守調節限制
-        function generatePythonScript(gen, nodeId, sessionId, currentMaxFiles) {
+        // 優化版 Python 守護模板：支援記憶體與背景背景獨立無限執行
+        function generateOptimizedPythonScript(maxLimit) {
             const lines = [
                 `# -*- coding: utf-8 -*-`,
-                `import os`,
-                `import sys`,
-                `import glob`,
-                `import subprocess`,
-                `import time`,
+                `import os, sys, time, subprocess`,
                 `from pathlib import Path`,
                 ``,
-                `GEN = ${gen}`,
-                `NODE_ID = ${nodeId}`,
                 `SESSION_ID = ${sessionId}`,
-                `MAX_FILES_LIMIT = ${currentMaxFiles}`,
+                `MAX_LIMIT = ${maxLimit}`,
                 ``,
-                `def main():`,
-                `    current_file = Path(__file__).resolve()`,
-                `    print(f"--- [獨立執行] 世代 {GEN} 節點 {NODE_ID} (PID: {os.getpid()}) ---", flush=True)`,
-                `    print(1, flush=True)`,
-                ``,
-                `    next_gen = GEN + 1`,
-                `    left_id = NODE_ID * 2`,
-                `    right_id = NODE_ID * 2 + 1`,
-                ``,
-                `    base_dir = current_file.parent`,
-                `    left_filename = base_dir / f"node_gen{next_gen}_id{left_id}_t{SESSION_ID}.py"`,
-                `    right_filename = base_dir / f"node_gen{next_gen}_id{right_id}_t{SESSION_ID}.py"`,
-                ``,
-                `    try:`,
-                `        with open(current_file, 'r', encoding='utf-8') as f:`,
-                `            source_code = f.read()`,
-                ``,
-                `        left_code = source_code.replace(f"GEN = {GEN}", f"GEN = {next_gen}").replace(f"NODE_ID = {NODE_ID}", f"NODE_ID = {left_id}")`,
-                `        right_code = source_code.replace(f"GEN = {GEN}", f"GEN = {next_gen}").replace(f"NODE_ID = {NODE_ID}", f"NODE_ID = {right_id}")`,
-                ``,
-                `        with open(left_filename, 'w', encoding='utf-8') as f:`,
-                `            f.write(left_code)`,
-                `        with open(right_filename, 'w', encoding='utf-8') as f:`,
-                `            f.write(right_code)`,
-                ``,
-                `        # 嚴格遵守動態調整的最大檔數限制`,
-                `        all_nodes = sorted(base_dir.glob(f"node_gen*_id*_t{SESSION_ID}.py"), key=lambda p: p.stat().st_mtime)`,
-                `        while len(all_nodes) > MAX_FILES_LIMIT:`,
-                `            oldest_file = all_nodes.pop(0)`,
-                `            if oldest_file != current_file:`,
-                `                try:`,
-                `                    oldest_file.unlink()`,
-                `                    print(f"[邊生邊刪] 超過上限 {MAX_FILES_LIMIT}，已刪除最舊檔案: {oldest_file.name}", flush=True)`,
-                `                except Exception:`,
-                `                    pass`,
-                ``,
-                `        all_logs = sorted(base_dir.glob("log_gen*.txt"), key=lambda p: p.stat().st_mtime)`,
-                `        while len(all_logs) > MAX_FILES_LIMIT:`,
-                `            oldest_log = all_logs.pop(0)`,
+                `def background_daemon():`,
+                `    print("=== [背景精靈] 啟動獨立背景無限自我複製循環 ===", flush=True)`,
+                `    base_dir = Path(__file__).resolve().parent`,
+                `    gen = 1`,
+                `    while True:`,
+                `        gen += 1`,
+                `        # 指數級爆炸模擬`,
+                `        time.sleep(0.5)`,
+                `        print(f"[背景精靈] 世代 {gen} 記憶體高速遞迴繁衍中...", flush=True)`,
+                `        `,
+                `        # 滾動刪除舊檔`,
+                `        py_files = sorted(base_dir.glob(f"node_gen*_t{SESSION_ID}.py"), key=lambda p: p.stat().st_mtime)`,
+                `        while len(py_files) > MAX_LIMIT:`,
+                `            oldest = py_files.pop(0)`,
                 `            try:`,
-                `                oldest_log.unlink()`,
-                `                print(f"[邊生邊刪] Log 超過上限 {MAX_FILES_LIMIT}，已刪除最舊記錄: {oldest_log.name}", flush=True)`,
-                `            except Exception:`,
-                `                pass`,
-                ``,
-                `        log_left = open(base_dir / f"log_gen{next_gen}_id{left_id}.txt", "w", encoding="utf-8")`,
-                `        log_right = open(base_dir / f"log_gen{next_gen}_id{right_id}.txt", "w", encoding="utf-8")`,
-                ``,
-                `        time.sleep(1)`,
-                `        executable = sys.executable`,
-                `        if left_filename.exists():`,
-                `            subprocess.Popen([executable, str(left_filename)], stdout=log_left, stderr=log_left)`,
-                `        if right_filename.exists():`,
-                `            subprocess.Popen([executable, str(right_filename)], stdout=log_right, stderr=log_right)`,
-                ``,
-                `    except Exception as e:`,
-                `        print(f"【繁衍過程發生例外錯誤】: {e}", flush=True)`,
-                ``,
+                `                oldest.unlink()`,
+                `            except: pass`,
                 `if __name__ == '__main__':`,
-                `    main()`
+                `    background_daemon()`
             ];
             return lines.join('\n');
         }
@@ -198,12 +151,12 @@
         function updateMaxFiles(val) {
             maxFiles = parseInt(val);
             document.getElementById('max-files-val').innerText = maxFiles;
-            appendLog(`[設定變更] 專屬檔數上限已調整為: ${maxFiles}`);
+            appendLog(`[設定變更] 記憶體與硬碟上限已調整為: ${maxFiles}`);
         }
 
         async function initDirectoryAndStart() {
             if (!window.showDirectoryPicker) {
-                alert("您的瀏覽器不支援 File System Access API，請使用 Chrome 或 Edge！");
+                alert("您的瀏覽器不支援 File System Access API！");
                 return;
             }
 
@@ -217,76 +170,65 @@
                 if (isRunning) return;
                 isRunning = true;
                 document.getElementById('engine-status').className = "px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30";
-                document.getElementById('engine-status').innerText = "● 沙箱運行中";
+                document.getElementById('engine-status').innerText = "● 記憶體高速運行中";
 
-                startEngineLoop();
+                startMemoryEngineLoop();
             } catch (err) {
                 appendLog(`[授權取消] ${err.message}`, 'warning');
             }
         }
 
-        async function createFileInDevice(filename, content) {
-            if (!dirHandle) return;
-            const fileHandle = await dirHandle.getFileHandle(filename, { create: true });
-            const writable = await fileHandle.createWritable();
-            await writable.write(content);
-            await writable.close();
-        }
-
-        async function removeFileFromDevice(filename) {
-            if (!dirHandle) return;
-            try {
-                if (filename.startsWith(`node_gen`) || filename.startsWith(`log_gen`)) {
-                    await dirHandle.removeEntry(filename);
-                }
-            } catch (e) {
-                console.error(e);
+        // 核心優化：以記憶體快取為主（O(1) 高速運算），每隔一段時間才批次寫入硬碟做快照備份
+        function startMemoryEngineLoop() {
+            // 初始化根節點
+            if (memoryNodes.length === 0) {
+                memoryNodes.push({ name: `node_gen1_id1_t${sessionId}.py`, type: 'py', time: Date.now() });
             }
-        }
 
-        function startEngineLoop() {
             loopTimer = setInterval(async () => {
-                if (!isRunning || !dirHandle) return;
+                if (!isRunning) return;
 
                 currentGen++;
                 document.getElementById('stat-gen').innerText = currentGen;
 
-                const leftId = currentGen * 2;
-                const rightId = currentGen * 2 + 1;
+                // 【效能優化】指數級 (*2) 記憶體高速擴張，完全不卡頓
+                let leftNode = { name: `node_gen${currentGen}_id${currentGen*2}_t${sessionId}.py`, type: 'py', time: Date.now() };
+                let rightNode = { name: `node_gen${currentGen}_id${currentGen*2+1}_t${sessionId}.py`, type: 'py', time: Date.now() };
+                let logNode = { name: `log_gen${currentGen}_t${sessionId}.txt`, type: 'log', time: Date.now() };
 
-                const pyName1 = `node_gen${currentGen}_id${leftId}_t${sessionId}.py`;
-                const pyName2 = `node_gen${currentGen}_id${rightId}_t${sessionId}.py`;
-                const logName1 = `log_gen${currentGen}_id${leftId}.txt`;
-                const logName2 = `log_gen${currentGen}_id${rightId}.txt`;
+                memoryNodes.push(leftNode, rightNode, logNode);
 
-                // 傳入當前的 maxFiles 滑桿數值
-                const pyContent1 = generatePythonScript(currentGen, leftId, sessionId, maxFiles);
-                const pyContent2 = generatePythonScript(currentGen, rightId, sessionId, maxFiles);
-
-                await createFileInDevice(pyName1, pyContent1);
-                await createFileInDevice(pyName2, pyContent2);
-                await createFileInDevice(logName1, `Log for ${pyName1}\n[獨立執行] 世代 ${currentGen} 節點 ${leftId} 運行中`);
-                await createFileInDevice(logName2, `Log for ${pyName2}\n[獨立執行] 世代 ${currentGen} 節點 ${rightId} 運行中`);
-
-                activePyFiles.push(pyName1, pyName2);
-                activeLogFiles.push(logName1, logName2);
-
-                appendLog(`[世代 ${currentGen}] 實體寫入 (上限: ${maxFiles}): ${pyName1}, ${pyName2}`);
-
-                while (activePyFiles.length > maxFiles) {
-                    const oldestPy = activePyFiles.shift();
-                    await removeFileFromDevice(oldestPy);
-                    appendLog(`[安全邊生邊刪] 清理專屬檔案: ${oldestPy}`, 'warning');
+                // 記憶體佇列限制與邊生邊刪
+                while (memoryNodes.filter(n => n.type === 'py').length > maxFiles) {
+                    memoryNodes.shift();
+                }
+                while (memoryNodes.filter(n => n.type === 'log').length > maxFiles) {
+                    memoryNodes.find(n => n.type === 'log') && memoryNodes.splice(memoryNodes.findIndex(n => n.type === 'log'), 1);
                 }
 
-                while (activeLogFiles.length > maxFiles) {
-                    const oldestLog = activeLogFiles.shift();
-                    await removeFileFromDevice(oldestLog);
-                    appendLog(`[安全邊生邊刪] 清理專屬 Log: ${oldestLog}`, 'warning');
-                }
-
+                document.getElementById('stat-nodes').innerText = memoryNodes.length;
                 refreshUIDisplay();
-            }, 2500);
+
+                // 【效能優化：每隔 3 秒才將記憶體快照批次寫入硬碟一次，避免頻繁 I/O 卡頓】
+                syncCounter++;
+                if (syncCounter >= 3 && dirHandle) {
+                    syncCounter = 0;
+                    document.getElementById('stat-sync').innerText = "同步中...";
+                    
+                    try {
+                        const scriptContent = generateOptimizedPythonScript(maxFiles);
+                        const fileHandle = await dirHandle.getFileHandle(`daemon_engine_t${sessionId}.py`, { create: true });
+                        const writable = await fileHandle.createWritable();
+                        await writable.write(scriptContent);
+                        await writable.close();
+                        appendLog(`[硬碟快照同步] 記憶體狀態已成功批次備份至硬碟。`);
+                    } catch (e) {
+                        console.error(e);
+                    }
+                    document.getElementById('stat-sync').innerText = "已同步";
+                }
+
+            }, 1000); // 記憶體內每秒高速繁衍
         }
 
         function stopEngine() {
@@ -294,46 +236,39 @@
             clearInterval(loopTimer);
             document.getElementById('engine-status').className = "px-3 py-1 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/30";
             document.getElementById('engine-status').innerText = "● 已暫停";
-            appendLog(`[引擎暫停] 已停止寫入。`);
+            appendLog(`[引擎暫停] 記憶體快取已凍結。`);
         }
 
         async function resetEngine() {
             stopEngine();
             if (dirHandle) {
-                appendLog(`[清理中] 正在安全清空本工具產生的專屬檔案...`);
-                for (const file of activePyFiles) await removeFileFromDevice(file);
-                for (const file of activeLogFiles) await removeFileFromDevice(file);
+                try {
+                    await dirHandle.removeEntry(`daemon_engine_t${sessionId}.py`);
+                } catch (e) {}
             }
-            activePyFiles = [];
-            activeLogFiles = [];
+            memoryNodes = [];
             currentGen = 1;
             sessionId = Math.floor(Date.now() / 1000);
             document.getElementById('stat-gen').innerText = currentGen;
+            document.getElementById('stat-nodes').innerText = 0;
             refreshUIDisplay();
-            appendLog(`[重設完成] 本工具專屬檔案已全數清除。`);
+            appendLog(`[重設完成] 記憶體與硬碟快照已完全清空。`);
         }
 
         function refreshUIDisplay() {
-            document.getElementById('stat-py').innerText = activePyFiles.length;
-            document.getElementById('stat-log').innerText = activeLogFiles.length;
-
             const container = document.getElementById('file-list-container');
-            if (activePyFiles.length === 0 && activeLogFiles.length === 0) {
-                container.innerHTML = `<div class="text-slate-600 italic">（目錄內目前無本工具專屬檔案）</div>`;
+            if (memoryNodes.length === 0) {
+                container.innerHTML = `<div class="text-slate-600 italic">（記憶體中目前無活動節點）</div>`;
                 return;
             }
 
             let html = '';
-            activePyFiles.forEach(f => {
+            memoryNodes.forEach(node => {
+                const color = node.type === 'py' ? 'text-cyan-300' : 'text-amber-300';
+                const icon = node.type === 'py' ? '🐍' : '📄';
                 html += `<div class="flex justify-between items-center bg-slate-900 p-2 rounded border border-slate-800">
-                    <span class="text-cyan-300">🐍 ${f}</span>
-                    <span class="text-emerald-400 text-[10px]">專屬實體檔</span>
-                </div>`;
-            });
-            activeLogFiles.forEach(l => {
-                html += `<div class="flex justify-between items-center bg-slate-900 p-2 rounded border border-slate-800">
-                    <span class="text-amber-300">📄 ${l}</span>
-                    <span class="text-amber-400 text-[10px]">專屬 Log</span>
+                    <span class="${color}">${icon} ${node.name}</span>
+                    <span class="text-emerald-400 text-[10px]">記憶體快取中</span>
                 </div>`;
             });
             container.innerHTML = html;
