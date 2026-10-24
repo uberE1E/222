@@ -53,7 +53,7 @@
                     <label class="text-sm font-semibold text-slate-300">🎚️ 專屬檔數上限限制</label>
                     <span id="max-files-val" class="text-cyan-400 font-bold terminal-font bg-slate-800 px-2 py-0.5 rounded">6</span>
                 </div>
-                <input id="max-files-slider" type="range" min="2" max="15" value="6" oninput="updateMaxFiles(this.value)"
+                <input id="max-files-slider" type="range" min="2" max="100" value="6" oninput="updateMaxFiles(this.value)"
                     class="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-cyan-400">
                 <span class="text-xs text-slate-500">超額時自動刪除本工具生成的舊檔案</span>
             </div>
@@ -115,7 +115,8 @@
         let activeLogFiles = [];
         let loopTimer = null;
 
-        function generatePythonScript(gen, nodeId, sessionId) {
+        // 【修正重點】將當前的 maxFiles 滑桿數值動態傳入 Python 模板中，確保實體檔案也遵守調節限制
+        function generatePythonScript(gen, nodeId, sessionId, currentMaxFiles) {
             const lines = [
                 `# -*- coding: utf-8 -*-`,
                 `import os`,
@@ -128,6 +129,7 @@
                 `GEN = ${gen}`,
                 `NODE_ID = ${nodeId}`,
                 `SESSION_ID = ${sessionId}`,
+                `MAX_FILES_LIMIT = ${currentMaxFiles}`,
                 ``,
                 `def main():`,
                 `    current_file = Path(__file__).resolve()`,
@@ -154,22 +156,23 @@
                 `        with open(right_filename, 'w', encoding='utf-8') as f:`,
                 `            f.write(right_code)`,
                 ``,
+                `        # 嚴格遵守動態調整的最大檔數限制`,
                 `        all_nodes = sorted(base_dir.glob(f"node_gen*_id*_t{SESSION_ID}.py"), key=lambda p: p.stat().st_mtime)`,
-                `        while len(all_nodes) > 6:`,
+                `        while len(all_nodes) > MAX_FILES_LIMIT:`,
                 `            oldest_file = all_nodes.pop(0)`,
                 `            if oldest_file != current_file:`,
                 `                try:`,
                 `                    oldest_file.unlink()`,
-                `                    print(f"[邊生邊刪] .py 過多，已刪除最舊檔案: {oldest_file.name}", flush=True)`,
+                `                    print(f"[邊生邊刪] 超過上限 {MAX_FILES_LIMIT}，已刪除最舊檔案: {oldest_file.name}", flush=True)`,
                 `                except Exception:`,
                 `                    pass`,
                 ``,
                 `        all_logs = sorted(base_dir.glob("log_gen*.txt"), key=lambda p: p.stat().st_mtime)`,
-                `        while len(all_logs) > 6:`,
+                `        while len(all_logs) > MAX_FILES_LIMIT:`,
                 `            oldest_log = all_logs.pop(0)`,
                 `            try:`,
                 `                oldest_log.unlink()`,
-                `                print(f"[邊生邊刪] Log 檔過多，已刪除最舊記錄: {oldest_log.name}", flush=True)`,
+                `                print(f"[邊生邊刪] Log 超過上限 {MAX_FILES_LIMIT}，已刪除最舊記錄: {oldest_log.name}", flush=True)`,
                 `            except Exception:`,
                 `                pass`,
                 ``,
@@ -256,8 +259,9 @@
                 const logName1 = `log_gen${currentGen}_id${leftId}.txt`;
                 const logName2 = `log_gen${currentGen}_id${rightId}.txt`;
 
-                const pyContent1 = generatePythonScript(currentGen, leftId, sessionId);
-                const pyContent2 = generatePythonScript(currentGen, rightId, sessionId);
+                // 傳入當前的 maxFiles 滑桿數值
+                const pyContent1 = generatePythonScript(currentGen, leftId, sessionId, maxFiles);
+                const pyContent2 = generatePythonScript(currentGen, rightId, sessionId, maxFiles);
 
                 await createFileInDevice(pyName1, pyContent1);
                 await createFileInDevice(pyName2, pyContent2);
@@ -267,7 +271,7 @@
                 activePyFiles.push(pyName1, pyName2);
                 activeLogFiles.push(logName1, logName2);
 
-                appendLog(`[世代 ${currentGen}] 實體寫入完整原碼: ${pyName1}, ${pyName2}`);
+                appendLog(`[世代 ${currentGen}] 實體寫入 (上限: ${maxFiles}): ${pyName1}, ${pyName2}`);
 
                 while (activePyFiles.length > maxFiles) {
                     const oldestPy = activePyFiles.shift();
