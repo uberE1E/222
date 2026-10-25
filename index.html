@@ -18,7 +18,6 @@
             user-select: none;
         }
 
-        /* Custom Scrollbar for Terminal */
         ::-webkit-scrollbar {
             width: 8px;
         }
@@ -59,23 +58,37 @@
             62% { transform: translate(0, 0) skew(5deg); }
         }
 
-        /* Modal styling to avoid standard alerts */
         #custom-modal {
             backdrop-filter: blur(10px);
             z-index: 100;
+        }
+
+        #cracked-menu {
+            backdrop-filter: blur(8px);
         }
     </style>
 </head>
 <body class="h-screen w-screen flex flex-col">
     <div class="crt-effect"></div>
 
+    <!-- 常駐登錄 / 語言切換列 -->
+    <div class="absolute top-4 right-4 z-50 flex gap-2 items-center">
+        <span id="user-status-tag" class="text-xs text-green-500 border border-green-800 px-2 py-1 bg-black/50 rounded">未登入</span>
+        <button id="persistent-login-btn" class="px-3 py-1 bg-gray-900 border border-green-500 text-green-500 font-bold hover:bg-green-500 hover:text-black transition-colors rounded text-xs">
+            Google 登入
+        </button>
+        <button id="lang-btn" class="px-3 py-1 bg-gray-900 border border-green-500 text-green-500 font-bold hover:bg-green-500 hover:text-black transition-colors rounded">
+            EN / 中文
+        </button>
+    </div>
+
     <!-- Login Screen -->
     <div id="login-screen" class="absolute inset-0 flex flex-col items-center justify-center bg-black z-40">
         <h1 class="text-5xl mb-8 glitch-text text-red-500 font-bold">SYSTEM BOOT // TIME PARADOX</h1>
-        <p class="mb-8 text-green-400">Authenticating user credentials via Firebase...</p>
+        <p class="mb-8 text-green-400">請透過 Google 帳號初始化連線以儲存遊戲進度...</p>
         <button id="login-btn" class="px-6 py-3 border-2 border-green-500 text-green-500 hover:bg-green-500 hover:text-black transition-colors font-bold uppercase tracking-widest flex items-center gap-3">
             <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
-            Initialize Link (Google Login)
+            <span id="login-btn-text">初始化連結 (Google 登入)</span>
         </button>
     </div>
 
@@ -94,7 +107,7 @@
         <!-- Right Panel: Hacking Interface -->
         <div id="right-panel" class="flex flex-col bg-black p-4 h-full">
             <div class="flex justify-between items-center mb-2">
-                <span class="text-sm text-green-600">>> NEURAL_LINK_TERMINAL v2.0</span>
+                <span class="text-sm text-green-600 cursor-pointer hover:underline" title="點擊可打開選單（若已破解）">>> NEURAL_LINK_TERMINAL v2.0</span>
                 <span class="text-xs text-red-500 animate-pulse">WARNING: ACTIVE AI DEFENSE</span>
             </div>
             
@@ -110,16 +123,16 @@ const btn = document.getElementById('time-btn');
 
             <div class="flex gap-4 mt-4">
                 <button id="exec-btn" class="flex-1 border border-cyan-500 text-cyan-500 py-2 hover:bg-cyan-900 transition-colors">
-                    > Execute Code Locally
+                    > 本地執行程式碼
                 </button>
                 <button id="submit-bug-btn" class="flex-1 border border-purple-500 text-purple-500 py-2 hover:bg-purple-900 transition-colors">
-                    > Submit Bug to AI
+                    > 提交漏洞給 AI
                 </button>
             </div>
 
             <!-- Terminal Output -->
             <div id="terminal" class="mt-4 h-48 bg-gray-950 border border-green-900 p-2 overflow-y-auto text-xs flex flex-col gap-1">
-                <div class="text-green-600">> System Initialized. Awaiting input.</div>
+                <div class="text-green-600">> 系統已初始化。等待輸入。提示：輸入密碼 'uber-1' 可直接解鎖破解版。</div>
             </div>
         </div>
     </div>
@@ -133,13 +146,39 @@ const btn = document.getElementById('time-btn');
         </div>
     </div>
 
+    <!-- Cracked Feature Menu -->
+    <div id="cracked-menu" class="hidden fixed inset-8 bg-black bg-opacity-95 border-2 border-purple-500 z-50 flex flex-col p-4 shadow-[0_0_50px_rgba(128,0,128,0.5)]">
+        <div class="flex justify-between items-center mb-4 border-b border-purple-500 pb-2">
+            <h2 class="text-purple-400 font-bold text-2xl">[ROOT ACCESS] 破解版專屬功能：即時網路與 AI 交流</h2>
+            <button id="close-cracked-btn" class="text-red-500 hover:text-red-300 font-bold text-xl">X</button>
+        </div>
+        <div class="flex flex-1 gap-4 overflow-hidden">
+            <!-- Multiplayer List -->
+            <div class="w-1/3 border border-purple-800 p-2 flex flex-col bg-gray-950">
+                <h3 class="text-purple-300 mb-2 border-b border-purple-800 pb-1 font-bold">即時線上玩家動態</h3>
+                <div id="player-list" class="flex-1 overflow-y-auto text-sm space-y-2">
+                    <!-- Players injected here -->
+                </div>
+            </div>
+            <!-- AI Chat -->
+            <div class="w-2/3 border border-purple-800 p-2 flex flex-col bg-gray-950">
+                <h3 class="text-purple-300 mb-2 border-b border-purple-800 pb-1 font-bold">AI 核心對話終端機</h3>
+                <div id="ai-chat-history" class="flex-1 overflow-y-auto text-sm space-y-3 mb-2 p-3 bg-black font-mono border border-purple-900">
+                    <div class="text-purple-400">> 系統：已連接至 Gemini AI 核心。請輸入任何問題或與 AI 進行日常對話。</div>
+                </div>
+                <div class="flex gap-2">
+                    <input type="text" id="ai-chat-input" class="flex-1 bg-black border border-purple-500 text-purple-300 p-2 font-mono focus:outline-none focus:border-purple-300" placeholder="與 Gemini 聊天或詢問...">
+                    <button id="ai-chat-send" class="px-6 bg-purple-900 text-purple-200 border border-purple-500 hover:bg-purple-700 font-bold">發送</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script type="module">
-        // Firebase Imports
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInWithCustomToken, signInAnonymously, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, getDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, getDoc, deleteDoc, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // Global Setup
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'time-paradox-app';
         const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
         let initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
@@ -147,8 +186,45 @@ const btn = document.getElementById('time-btn');
         let app, db, auth, userId;
         let cheatActive = false;
         let aiDefenseInterval = null;
+        let currentLang = 'zh';
+
+        const translations = {
+            zh: {
+                boot: "SYSTEM BOOT // TIME PARADOX",
+                authMsg: "請透過 Google 帳號初始化連線以儲存遊戲進度...",
+                loginBtnText: "初始化連結 (Google 登入)",
+                area: "區域: TARGET_ZONE",
+                timeBtnText: "時空穿越",
+                terminalTitle: ">> NEURAL_LINK_TERMINAL v2.0",
+                warning: "警告: 主動式 AI 防禦已啟動",
+                execCode: "> 本地執行程式碼",
+                submitBug: "> 提交漏洞給 AI",
+                sysInit: "> 系統已初始化。等待輸入。提示：輸入密碼 'uber-1' 可直接解鎖破解版。"
+            },
+            en: {
+                boot: "SYSTEM BOOT // TIME PARADOX",
+                authMsg: "Authenticate via Google to save your progress...",
+                loginBtnText: "Initialize Link (Google Login)",
+                area: "AREA: TARGET_ZONE",
+                timeBtnText: "TIME JUMP",
+                terminalTitle: ">> NEURAL_LINK_TERMINAL v2.0",
+                warning: "WARNING: ACTIVE AI DEFENSE",
+                execCode: "> Execute Code Locally",
+                submitBug: "> Submit Bug to AI",
+                sysInit: "> System Initialized. Awaiting input. Type 'uber-1' to unlock cracked version."
+            }
+        };
         
-        // DOM Elements
+        const langBtn = document.getElementById('lang-btn');
+        const persistentLoginBtn = document.getElementById('persistent-login-btn');
+        const userStatusTag = document.getElementById('user-status-tag');
+        const crackedMenu = document.getElementById('cracked-menu');
+        const closeCrackedBtn = document.getElementById('close-cracked-btn');
+        const playerList = document.getElementById('player-list');
+        const aiChatHistory = document.getElementById('ai-chat-history');
+        const aiChatInput = document.getElementById('ai-chat-input');
+        const aiChatSend = document.getElementById('ai-chat-send');
+
         const loginScreen = document.getElementById('login-screen');
         const gameUI = document.getElementById('game-ui');
         const loginBtn = document.getElementById('login-btn');
@@ -164,11 +240,9 @@ const btn = document.getElementById('time-btn');
         const modalMsg = document.getElementById('modal-msg');
         const modalClose = document.getElementById('modal-close');
 
-        // Gemini API Config
-        const geminiApiKey = ""; // Required to be empty for platform injection
-        const geminiApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${geminiApiKey}`;
+        const geminiApiKey = ""; 
+        const geminiApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`;
 
-        // Utility: Show Modal
         function showModal(title, msg, type = 'info') {
             modalTitle.innerText = title;
             modalMsg.innerText = msg;
@@ -183,13 +257,26 @@ const btn = document.getElementById('time-btn');
                 modal.querySelector('div').className = "bg-gray-900 border-4 border-blue-500 p-8 max-w-lg w-full text-center shadow-[0_0_40px_rgba(0,0,255,0.5)]";
                 modalTitle.className = "text-3xl font-bold mb-4 text-blue-500";
             }
-            
             modal.classList.remove('hidden');
         }
 
         modalClose.onclick = () => modal.classList.add('hidden');
 
-        // Utility: Log to Terminal
+        langBtn.onclick = () => {
+            currentLang = currentLang === 'zh' ? 'en' : 'zh';
+            langBtn.innerText = currentLang === 'zh' ? 'EN / 中文' : '中文 / EN';
+            
+            document.querySelector('#login-screen h1').innerText = translations[currentLang].boot;
+            document.querySelector('#login-screen p').innerText = translations[currentLang].authMsg;
+            document.getElementById('login-btn-text').innerText = translations[currentLang].loginBtnText;
+            document.querySelector('#left-panel div').innerText = translations[currentLang].area;
+            if (!cheatActive) timeBtn.innerText = translations[currentLang].timeBtnText;
+            document.querySelector('#right-panel span.text-green-600').innerText = translations[currentLang].terminalTitle;
+            document.querySelector('#right-panel span.text-red-500').innerText = translations[currentLang].warning;
+            execBtn.innerText = translations[currentLang].execCode;
+            submitBugBtn.innerText = translations[currentLang].submitBug;
+        };
+
         function log(msg, type = 'info') {
             const p = document.createElement('div');
             const time = new Date().toLocaleTimeString();
@@ -203,63 +290,87 @@ const btn = document.getElementById('time-btn');
             terminal.scrollTop = terminal.scrollHeight;
         }
 
-        // Initialize Firebase & Game
-        async function initGame() {
+        async function initGame(isGooglePopup = true) {
             try {
                 if (!firebaseConfig || Object.keys(firebaseConfig).length === 0) {
-                    throw new Error("No Firebase configuration found. Running offline.");
+                    throw new Error("No Firebase configuration found.");
                 }
 
                 app = initializeApp(firebaseConfig);
                 db = getFirestore(app);
                 auth = getAuth(app);
                 
-                log("Authenticating...", "warning");
+                log("正在透過 Firebase 驗證 Google 憑證...", "warning");
                 
                 if (initialAuthToken) {
                     await signInWithCustomToken(auth, initialAuthToken);
+                } else if (isGooglePopup) {
+                    const provider = new GoogleAuthProvider();
+                    await signInWithPopup(auth, provider);
                 } else {
-                    try {
-                        const provider = new GoogleAuthProvider();
-                        await signInWithPopup(auth, provider);
-                    } catch (e) {
-                        log("Google Popup blocked or failed. Falling back to anonymous login.", "warning");
-                        await signInAnonymously(auth);
-                    }
+                    await signInAnonymously(auth);
                 }
                 
                 userId = auth.currentUser.uid;
-                log(`Auth successful. UserID: ${userId.substring(0,8)}...`, "success");
+                const userName = auth.currentUser.displayName || `Hacker-${userId.substring(0,4)}`;
+                userStatusTag.innerText = `玩家: ${userName}`;
+                persistentLoginBtn.innerText = "已登入 (Google)";
+                persistentLoginBtn.disabled = true;
+
+                log(`Google 驗證成功。使用者 ID: ${userId.substring(0,8)}...`, "success");
                 
-                // Save/Load Progress
-                const progressRef = doc(db, 'artifacts', appId, 'users', userId);
+                const progressRef = doc(db, 'artifacts', appId, 'users', userId, 'gameData', 'progress');
                 const docSnap = await getDoc(progressRef);
                 if (!docSnap.exists()) {
                     await setDoc(progressRef, { attempts: 0, level: 1, lastLogin: new Date().toISOString() });
-                    log("Created new progress profile.");
+                    log("已在雲端帳號建立新的遊戲進度檔。");
                 } else {
-                    log("Loaded existing progress profile.");
+                    log("已從雲端帳號載入現有遊戲進度。");
                 }
+
+                const publicPlayerRef = doc(db, 'artifacts', appId, 'public', 'data', 'players', userId);
+                await setDoc(publicPlayerRef, { 
+                    name: userName,
+                    status: '嘗試駭入中...',
+                    lastActive: Date.now()
+                });
+
+                const playersColl = collection(db, 'artifacts', appId, 'public', 'data', 'players');
+                onSnapshot(playersColl, (snapshot) => {
+                    playerList.innerHTML = '';
+                    snapshot.forEach(docSnap => {
+                        const data = docSnap.data();
+                        const p = document.createElement('div');
+                        p.className = "text-purple-300 border-l-2 border-purple-600 pl-2 mb-2 pb-1 border-b border-purple-900";
+                        p.innerHTML = `<span class="font-bold">${data.name}</span><br><span class="text-xs text-gray-400">狀態: <span class="text-purple-400">${data.status}</span></span>`;
+                        playerList.appendChild(p);
+                    });
+                }, (error) => {
+                    console.warn("Multiplayer sync error:", error);
+                });
+
             } catch (err) {
                 console.warn(err);
-                log("Backend connection failed. Running in offline bypass mode.", "warning");
+                log("Google 登入失敗或略過，啟動訪客離線模式。", "warning");
                 userId = "guest-" + Math.floor(Math.random() * 10000);
+                userStatusTag.innerText = "訪客模式";
             } finally {
-                // Show Game
                 loginScreen.classList.add('hidden');
                 gameUI.classList.remove('hidden');
-                
                 startGameMechanics();
             }
         }
 
         loginBtn.onclick = () => {
-            loginBtn.innerText = "CONNECTING...";
+            document.getElementById('login-btn-text').innerText = "連線中...";
             loginBtn.disabled = true;
-            initGame();
+            initGame(true);
         };
 
-        // Core Game Mechanics: The Evasive Button
+        persistentLoginBtn.onclick = () => {
+            initGame(true);
+        };
+
         function startGameMechanics() {
             leftPanel.addEventListener('mousemove', (e) => {
                 if (cheatActive) return;
@@ -267,13 +378,9 @@ const btn = document.getElementById('time-btn');
                 const rect = timeBtn.getBoundingClientRect();
                 const btnX = rect.left + rect.width / 2;
                 const btnY = rect.top + rect.height / 2;
-                
-                // Calculate distance
                 const dist = Math.hypot(e.clientX - btnX, e.clientY - btnY);
                 
-                // Extreme evasive maneuvers - 100% impossible
                 if (dist < 450) {
-                    // Evasion move
                     const maxW = leftPanel.clientWidth - rect.width;
                     const maxH = leftPanel.clientHeight - rect.height;
                     const newX = Math.random() * maxW;
@@ -285,61 +392,58 @@ const btn = document.getElementById('time-btn');
                 }
             });
 
-            // The TRAP
+            // 原始點擊陷阱：未破解狀態下點擊會刪除進度並關閉網頁
             timeBtn.onclick = async (e) => {
                 if (cheatActive) {
-                    showModal("OVERRIDE SUCCESS", "進入破解版模式，安全穿越！\n資料庫存取已繞過。", "success");
+                    showModal("OVERRIDE SUCCESS", "已進入破解模式，安全完成時空穿越！", "success");
                     return;
                 }
 
-                // Execute malicious trap
                 try {
-                    if (db) {
-                        const progressRef = doc(db, 'artifacts', appId, 'users', userId);
+                    if (db && userId && !userId.startsWith('guest')) {
+                        const progressRef = doc(db, 'artifacts', appId, 'users', userId, 'gameData', 'progress');
                         await deleteDoc(progressRef);
+                        
+                        const publicPlayerRef = doc(db, 'artifacts', appId, 'public', 'data', 'players', userId);
+                        await setDoc(publicPlayerRef, { status: '進度已刪除 / 失敗', lastActive: Date.now() }, { merge: true });
                     }
-                    showModal("FATAL ERROR", "進度已刪除！時空穿越失敗。\n網頁防護機制已觸發，即將關閉連接...", "error");
+                    showModal("FATAL ERROR", "陷阱觸發！遊戲進度已從 Google 帳號中刪除。\n時空穿越失敗，正在強制關閉連線...", "error");
                     
                     setTimeout(() => {
                         window.close();
-                        // Fallback if window.close is blocked
-                        document.body.innerHTML = '<div style="color:red; font-size: 5rem; text-align:center; margin-top:20vh; font-family: monospace;">CONNECTION TERMINATED.<br>YOUR DATA IS GONE.</div>';
+                        document.body.innerHTML = '<div style="color:red; font-size: 4rem; text-align:center; margin-top:20vh; font-family: monospace;">CONNECTION TERMINATED.<br>YOUR ACCOUNT PROGRESS HAS BEEN WIPED.</div>';
                     }, 4000);
                 } catch (err) {
-                    log("Trap executed, but failed to reach DB.", "error");
+                    log("陷阱已觸發，資料刪除中...", "error");
                 }
             };
 
-            // Start AI Opponent Loop
             aiDefenseInterval = setInterval(updateAIDefense, 45000);
-            log("Game loops initialized. AI defense active.", "info");
+            log("遊戲迴圈已初始化，AI 防禦機制運作中。", "info");
         }
 
-        // Code Execution Handler
         execBtn.onclick = () => {
             const code = codeEditor.value;
             try {
-                log("Executing local script...");
-                // Create a localized scope to execute the code safely
+                log("正在本地執行程式碼...");
                 const execFunc = new Function('timeBtn', 'log', code);
                 execFunc(timeBtn, log);
-                log("Script executed successfully.", "success");
+                log("腳本執行完畢。", "success");
             } catch (err) {
-                log(`Execution Error: ${err.message}`, "error");
+                log(`執行錯誤: ${err.message}`, "error");
             }
         };
 
-        // Submit to AI Handler
         submitBugBtn.onclick = async () => {
             const code = codeEditor.value;
             if (!code.trim()) {
-                log("Error: Empty code block.", "error");
+                log("錯誤：程式碼區塊不能為空。", "error");
                 return;
             }
 
-            log("Uplinking code to AI Core for validation...", "warning");
+            log("正在將程式碼上傳至 AI 進行漏洞審查...", "warning");
             submitBugBtn.disabled = true;
-            submitBugBtn.innerText = "Analyzing...";
+            submitBugBtn.innerText = "分析中...";
 
             const systemPrompt = `You are evaluating a player's JS code for a hacking puzzle game. The player needs to click a button with id 'time-btn' OR bypass its onclick deletion trap so their account data is kept safe. Analyze their submitted code. If it successfully overrides the onclick, removes the event listener, safely clicks it programmatically after disarming, or generally achieves the goal of interacting with the button without triggering a data deletion script, reply with ONLY 'SUCCESS: <explanation of how they won>'. Otherwise, reply 'FAIL: <reason why it doesn't work or still triggers the trap>'. DO NOT use markdown code blocks in your response.`;
 
@@ -356,28 +460,31 @@ const btn = document.getElementById('time-btn');
                 });
                 
                 const result = await response.json();
-                const reply = result.candidates?.[0]?.content?.parts?.[0]?.text || "FAIL: AI Core unresponsive.";
+                const reply = result.candidates?.[0]?.content?.parts?.[0]?.text || "FAIL: AI 核心無回應。";
                 
                 if (reply.trim().startsWith("SUCCESS")) {
                     clearInterval(aiDefenseInterval);
-                    showModal("通關成功！", "進度已保留並完成時空穿越！\n\n[AI 判定]:\n" + reply, "success");
-                    log("SYSTEM COMPROMISED. PLAYER WINS.", "success");
+                    showModal("通關成功！", "進度已保留並成功完成時空穿越！\n\n[AI 判定通過]:\n" + reply, "success");
+                    log("系統已被破解！玩家成功通關！", "success");
+                    if (db && userId) {
+                        const publicPlayerRef = doc(db, 'artifacts', appId, 'public', 'data', 'players', userId);
+                        await setDoc(publicPlayerRef, { status: '通關成功 - 逃脫', lastActive: Date.now() }, { merge: true });
+                    }
                 } else {
-                    log(`AI VERDICT: ${reply}`, "error");
-                    showModal("HACK FAILED", reply, "error");
+                    log(`AI 審查判定: ${reply}`, "error");
+                    showModal("漏洞驗證失敗", reply, "error");
                 }
             } catch (err) {
-                log(`Uplink failed: ${err.message}`, "error");
+                log(`連線失敗: ${err.message}`, "error");
             } finally {
                 submitBugBtn.disabled = false;
-                submitBugBtn.innerText = "> Submit Bug to AI";
+                submitBugBtn.innerText = "> 提交漏洞給 AI";
             }
         };
 
-        // Dynamic AI Opponent Logic
         async function updateAIDefense() {
             if (cheatActive) return;
-            log("Warning: Enemy AI is generating new defense countermeasures...", "warning");
+            log("警告：AI 敵對防禦系統正在自動生成新的干擾防禦碼...", "warning");
 
             const aiPrompt = `You are an adversarial AI in a hacking game. Your job is to output EXACTLY 1 to 3 lines of JavaScript code to make the HTML element with id 'time-btn' significantly harder to click or find. You can modify its CSS styles (opacity, transform, animation, z-index, filters). Assume 'document.getElementById("time-btn")' is used to get the button. Do NOT remove or delete the button. Do NOT use backticks, quotes, or markdown block formatting. Output ONLY raw executable JavaScript code.`;
 
@@ -394,21 +501,18 @@ const btn = document.getElementById('time-btn');
                 
                 const result = await response.json();
                 let newCode = result.candidates?.[0]?.content?.parts?.[0]?.text || "";
-                
-                // Clean up AI output just in case it wraps it in markdown
                 newCode = newCode.replace(/```javascript/gi, '').replace(/```/g, '').trim();
                 
                 if (newCode) {
                     const aiFunc = new Function(newCode);
                     aiFunc();
-                    log("Enemy AI Defense Protocol Updated!", "error");
+                    log("敵對 AI 防禦協議已更新！", "error");
                 }
             } catch (err) {
-                log(`AI Defense Update dropped: ${err.message}`);
+                log(`AI 防禦更新失敗: ${err.message}`);
             }
         }
 
-        // Cheat Code Keylogger
         let keyBuffer = '';
         window.addEventListener('keydown', (e) => {
             keyBuffer += e.key;
@@ -425,7 +529,6 @@ const btn = document.getElementById('time-btn');
             cheatActive = true;
             clearInterval(aiDefenseInterval);
             
-            // Revert button to safe state
             timeBtn.style.transition = 'all 1s ease';
             timeBtn.style.transform = 'translate(-50%, -50%) scale(1.5)';
             timeBtn.style.left = '50%';
@@ -437,17 +540,65 @@ const btn = document.getElementById('time-btn');
             timeBtn.style.pointerEvents = 'auto';
             timeBtn.style.filter = 'none';
             timeBtn.style.opacity = '1';
-            timeBtn.innerText = '安全穿越 (CRACKED)';
+            timeBtn.innerText = currentLang === 'zh' ? '安全穿越 (已解鎖破解版)' : 'SAFE JUMP (CRACKED)';
             
             log("=========================================", "success");
-            log(" ROOT OVERRIDE ACCEPTED.", "success");
-            log(" CHEAT CODE 'uber-1' ACTIVATED.", "success");
-            log(" EVASION LOGIC DISABLED. TRAP DISARMED.", "success");
+            log(" ROOT 授權成功：金鑰 'uber-1' 已激活。", "success");
+            log(" 所有防禦機制與陷阱已停用。", "success");
             log("=========================================", "success");
             
-            showModal("SYSTEM CRACKED", "進入破解版模式\n所有防護機制已停用。", "success");
+            showModal("已啟用破解版模式", "根目錄訪問成功！所有安全防禦與點擊逃逸機制已解除。\n[已解鎖：右上方終端機標題旁或選單可開啟線上互動與正常 AI 對話功能]", "success");
+            
+            crackedMenu.classList.remove('hidden');
+            
+            if (db && userId) {
+                const publicPlayerRef = doc(db, 'artifacts', appId, 'public', 'data', 'players', userId);
+                setDoc(publicPlayerRef, { status: 'ROOT 授權 (破解版)', lastActive: Date.now() }, { merge: true });
+            }
         }
 
+        closeCrackedBtn.onclick = () => crackedMenu.classList.add('hidden');
+        
+        document.querySelector('.text-green-600').onclick = () => {
+            if (cheatActive) crackedMenu.classList.remove('hidden');
+        };
+
+        aiChatSend.onclick = async () => {
+            const query = aiChatInput.value.trim();
+            if (!query) return;
+            
+            const uMsg = document.createElement('div');
+            uMsg.className = "text-purple-200 mb-1";
+            uMsg.innerText = `> 你: ${query}`;
+            aiChatHistory.appendChild(uMsg);
+            aiChatInput.value = '';
+            
+            const aiMsg = document.createElement('div');
+            aiMsg.className = "text-purple-500 animate-pulse mb-1";
+            aiMsg.innerText = `> Gemini: 思考中...`;
+            aiChatHistory.appendChild(aiMsg);
+            aiChatHistory.scrollTop = aiChatHistory.scrollHeight;
+
+            try {
+                const payload = { 
+                    contents: [{ parts: [{ text: `你現在是 Gemini，是一個友善、聰明且對話正常的 AI 助理。玩家在破解版遊戲中與你對話，請以自然、流暢、溫和且有智慧的中文回答玩家的訊息：${query}` }] }] 
+                };
+                const res = await fetch(geminiApiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "抱歉，我目前無法回應。";
+                
+                aiMsg.className = "text-purple-300 mb-1";
+                aiMsg.innerText = `> Gemini: ${text}`;
+            } catch (err) {
+                aiMsg.className = "text-red-500 mb-1";
+                aiMsg.innerText = `> 系統錯誤: 無法與 AI 建立連線。`;
+            }
+            aiChatHistory.scrollTop = aiChatHistory.scrollHeight;
+        };
     </script>
 </body>
 </html>
