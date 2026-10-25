@@ -37,7 +37,7 @@
             <canvas id="gameCanvas" width="360" height="360" class="bg-slate-950 rounded-xl border-2 border-slate-800/80 shadow-inner block"></canvas>
             
             <!-- 開始/結束 覆蓋面板 -->
-            <div id="overlay" class="absolute inset-0 bg-slate-950/90 backdrop-blur-sm rounded-xl flex flex-col items-center justify-center p-6 text-center">
+            <div id="overlay" class="absolute inset-0 bg-slate-950/90 backdrop-blur-sm rounded-xl flex flex-col items-center justify-center p-6 text-center z-10">
                 <h2 id="overlayTitle" class="text-2xl font-bold text-cyan-400 mb-2">準備挑戰！</h2>
                 <p id="overlayDesc" class="text-xs text-slate-400 mb-6">點擊下方按鈕或按空白鍵開始遊戲</p>
                 <button onclick="startGame()" class="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-bold py-3 px-8 rounded-xl transition-all shadow-lg shadow-emerald-900/30 transform hover:scale-105 active:scale-95">
@@ -54,64 +54,144 @@
             </div>
             <div class="flex justify-between items-center text-[11px] text-slate-500 pt-1 border-t border-slate-900">
                 <span>🎮 方向鍵 / WASD 控制</span>
-                <span>🔄 重新整理（F5/Ctrl+R）自動放行</span>
+                <span>🔄 重新整理（F5/Ctrl+R/刷新按鈕）自動放行</span>
             </div>
         </div>
     </div>
 
-    <!-- 訊息提示視窗 (取代標準 alert) -->
-    <div id="customAlert" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
-        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 max-w-xs w-full text-center shadow-2xl">
-            <div class="text-3xl mb-3" id="alertIcon">🎮</div>
-            <h3 class="text-lg font-bold text-slate-100 mb-2" id="alertTitle">提示</h3>
-            <p class="text-xs text-slate-400 mb-5" id="alertMsg">訊息內容</p>
-            <button onclick="closeAlert()" class="w-full bg-cyan-600 hover:bg-cyan-500 text-white font-semibold py-2 rounded-xl text-xs transition">
-                確定
-            </button>
+    <!-- 自訂 10 連確認彈窗 (針對滑鼠離開/關閉動作處理) -->
+    <div id="exitModal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md hidden flex items-center justify-center p-4 z-50">
+        <div class="bg-slate-900 border-2 border-rose-500/50 rounded-2xl p-6 max-w-sm w-full text-center shadow-2xl relative animate-bounce-short">
+            <div class="text-4xl mb-3">⚠️</div>
+            <h3 class="text-lg font-bold text-rose-400 mb-1" id="exitTitle">防護警告</h3>
+            <p class="text-xs text-slate-300 font-semibold mb-4" id="exitProgress">確定要關閉網頁嗎？ (1/10)</p>
+            <p class="text-[11px] text-slate-400 mb-6 bg-slate-950 p-3 rounded-xl border border-slate-800">
+                您正試圖離開遊戲！必須連續確認 10 次才能離開。
+            </p>
+            <div class="flex gap-3">
+                <button onclick="cancelExit()" class="w-1/2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 rounded-xl text-xs transition shadow-lg shadow-emerald-900/30">
+                    留下來玩
+                </button>
+                <button onclick="confirmExitStep()" class="w-1/2 bg-rose-600 hover:bg-rose-500 text-white font-bold py-2.5 rounded-xl text-xs transition shadow-lg shadow-rose-900/30">
+                    確定離開
+                </button>
+            </div>
         </div>
     </div>
 
     <script>
         // ----------------------------------------------------
-        // 1. 關閉視窗與重新整理判斷邏輯
+        // 1. Web Audio API 音效生成器
         // ----------------------------------------------------
-        let isReloading = false;
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
-        // 偵測鍵盤重新整理組合鍵 (F5, Ctrl+R, Cmd+R)
+        function playSound(type) {
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            const now = audioCtx.currentTime;
+
+            if (type === 'eat') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(300, now);
+                osc.frequency.exponentialRampToValueAtTime(600, now + 0.1);
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                osc.start(now);
+                osc.stop(now + 0.1);
+            } else if (type === 'die') {
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(180, now);
+                osc.frequency.exponentialRampToValueAtTime(40, now + 0.3);
+                gain.gain.setValueAtTime(0.3, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+                osc.start(now);
+                osc.stop(now + 0.3);
+            }
+        }
+
+        // ----------------------------------------------------
+        // 2. 關閉與重新整理精準判斷機制
+        // ----------------------------------------------------
+        let isRefreshing = false;
+
+        // A. 偵測鍵盤重新整理熱鍵 (F5, Ctrl+R, Cmd+R)
         window.addEventListener('keydown', (e) => {
             if (
                 e.key === 'F5' || 
-                (e.keyCode === 116) || 
+                e.keyCode === 116 || 
                 ((e.ctrlKey || e.metaKey) && (e.key === 'r' || e.key === 'R' || e.keyCode === 82))
             ) {
-                isReloading = true;
+                isRefreshing = true;
             }
         });
 
-        // 檢查頁面加載類型（判斷是否由重新整理載入）
+        // B. 偵測瀏覽器重新整理 (透過 Performance Navigation API)
         try {
             const navEntries = performance.getEntriesByType('navigation');
             if (navEntries.length > 0 && navEntries[0].type === 'reload') {
-                isReloading = true;
+                isRefreshing = true;
             } else if (performance.navigation && performance.navigation.type === 1) {
-                isReloading = true;
+                isRefreshing = true;
             }
         } catch (err) {
-            console.log('Navigation timing API not fully supported');
+            console.log('Navigation timing API verified');
         }
 
-        // 監聽 beforeunload 事件
+        // C. 監聽前台分頁切換/滑鼠移開視窗頂部 (捕捉試圖關閉視窗的意圖)
+        let exitStep = 1;
+        const exitModal = document.getElementById('exitModal');
+
+        document.addEventListener('mouseleave', (e) => {
+            if (e.clientY <= 10 && !isRefreshing) {
+                trigger10StepExitModal();
+            }
+        });
+
+        function trigger10StepExitModal() {
+            if (isRefreshing) return;
+            exitStep = 1;
+            updateExitModal();
+            exitModal.classList.remove('hidden');
+        }
+
+        function updateExitModal() {
+            document.getElementById('exitProgress').innerText = `確定要關閉網頁嗎？ (${exitStep}/10)`;
+        }
+
+        function confirmExitStep() {
+            if (exitStep < 10) {
+                exitStep++;
+                updateExitModal();
+            } else {
+                // 完成 10 次確認後關閉彈窗放行
+                exitModal.classList.add('hidden');
+                alert("已完成 10 次確認，已解除關閉防護！");
+            }
+        }
+
+        function cancelExit() {
+            exitStep = 1;
+            exitModal.classList.add('hidden');
+        }
+
+        // D. 標準 beforeunload 事件處置
         window.addEventListener('beforeunload', (e) => {
-            // 如果是重新整理，直接放行，不彈出任何提示
-            if (isReloading) {
+            // 如果是重新整理，直接放行，不顯示任何防護提示
+            if (isRefreshing) {
                 return;
             }
 
-            // 否則觸發 10 連續跳窗確認防護
+            // 觸發原生 10 連續跳窗確認
             for (let i = 1; i <= 10; i++) {
-                const stay = confirm(`【防護提示 ${i}/10】\n\n確定要離開這隻貪吃蛇嗎？按「取消」繼續留下來玩！`);
+                const stay = confirm(`確定要關閉網頁嗎？ (${i}/10)\n\n按「取消」繼續留下來玩！`);
                 if (stay) {
-                    // 使用者點擊取消（選擇留下），中止預設離開動作
+                    // 使用者點擊取消（選擇留下）
                     e.preventDefault();
                     e.returnValue = '';
                     return '';
@@ -120,7 +200,7 @@
         });
 
         // ----------------------------------------------------
-        // 2. 貪吃蛇核心遊戲邏輯
+        // 3. 貪吃蛇遊戲核心 logic
         // ----------------------------------------------------
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
@@ -140,11 +220,10 @@
 
         document.getElementById('highScore').innerText = highScore;
 
-        // 監聽控制鍵
+        // 控制按鍵處理
         document.addEventListener('keydown', handleKeyPress);
 
         function handleKeyPress(e) {
-            // 避免按鍵滾動頁面
             if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(e.key)) {
                 e.preventDefault();
             }
@@ -195,6 +274,7 @@
 
             // 撞牆判定
             if (head.x < 0 || head.x >= tileCount || head.y < 0 || head.y >= tileCount) {
+                playSound('die');
                 gameOver('撞到牆壁囉！');
                 return;
             }
@@ -202,6 +282,7 @@
             // 撞自身判定
             for (let i = 0; i < snake.length; i++) {
                 if (snake[i].x === head.x && snake[i].y === head.y) {
+                    playSound('die');
                     gameOver('咬到自己了！');
                     return;
                 }
@@ -211,6 +292,7 @@
 
             // 吃食物判定
             if (head.x === food.x && head.y === food.y) {
+                playSound('eat');
                 score += 10;
                 document.getElementById('currentScore').innerText = score;
                 if (score > highScore) {
@@ -231,7 +313,7 @@
             ctx.fillStyle = '#020617';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // 繪製微弱網格
+            // 微弱網格
             ctx.strokeStyle = '#0f172a';
             ctx.lineWidth = 0.5;
             for (let i = 0; i < canvas.width; i += gridSize) {
@@ -241,7 +323,7 @@
                 ctx.stroke();
             }
 
-            // 繪製食物 (發光效果)
+            // 繪製食物
             ctx.shadowBlur = 10;
             ctx.shadowColor = '#f43f5e';
             ctx.fillStyle = '#f43f5e';
@@ -268,7 +350,6 @@
                 );
             });
 
-            // 清除發光陰影
             ctx.shadowBlur = 0;
         }
 
@@ -276,7 +357,6 @@
             food.x = Math.floor(Math.random() * tileCount);
             food.y = Math.floor(Math.random() * tileCount);
 
-            // 避免生成在蛇身上
             snake.forEach(part => {
                 if (part.x === food.x && part.y === food.y) spawnFood();
             });
@@ -291,18 +371,7 @@
             document.getElementById('overlay').classList.remove('hidden');
         }
 
-        function showAlert(title, msg, icon = '🎮') {
-            document.getElementById('alertTitle').innerText = title;
-            document.getElementById('alertMsg').innerText = msg;
-            document.getElementById('alertIcon').innerText = icon;
-            document.getElementById('customAlert').classList.remove('hidden');
-        }
-
-        function closeAlert() {
-            document.getElementById('customAlert').classList.add('hidden');
-        }
-
-        // 初始繪製
+        // 初始畫布繪製
         draw();
     </script>
 </body>
