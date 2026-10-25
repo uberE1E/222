@@ -3,332 +3,171 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>自主遞迴二元樹引擎控制台 (Autonomous Exponential Engine)</title>
+    <title>經典貪吃蛇遊戲 (具備關閉防護機制)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&family=Inter:wght@400;600;700&display=swap');
         body { font-family: 'Inter', sans-serif; }
-        .terminal-font { font-family: 'Fira Code', monospace; }
+        canvas { background-color: #0f172a; box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.5); }
     </style>
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col items-center p-4 md:p-8">
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col items-center justify-center p-4">
 
-    <div class="w-full max-w-5xl bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden">
+    <div class="w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl p-6 flex flex-col items-center">
         
-        <!-- 頂部標題列 -->
-        <div class="bg-slate-850 px-6 py-4 border-b border-slate-800 flex flex-wrap justify-between items-center gap-4">
-            <div>
-                <h1 class="text-xl font-bold text-cyan-400 flex items-center gap-2">
-                    <span>🚀</span> 完全自主二元樹引擎 (純 Python 背景遞迴 *2)
-                </h1>
-                <p class="text-xs text-slate-400 mt-1">子檔案自主執行子檔案 ｜ 脫離網頁獨立背景運轉 ｜ 指數級 (*2) 爆炸生長</p>
-            </div>
-            <span id="engine-status" class="px-3 py-1 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/30">
-                ● 未授權目錄 (Waiting)
-            </span>
-        </div>
-
-        <!-- 控制面板區 -->
-        <div class="p-6 grid grid-cols-1 md:grid-cols-3 gap-6 border-b border-slate-800 bg-slate-900/50">
-            
-            <!-- 按鈕操作 (移除暫停，僅保留啟動與安全重設) -->
-            <div class="flex flex-col justify-between gap-3">
-                <label class="text-sm font-semibold text-slate-300">⚙️ 引擎狀態控制</label>
-                <div class="grid grid-cols-2 gap-2">
-                    <button onclick="initDirectoryAndStart()" class="bg-emerald-600 hover:bg-emerald-500 text-white py-2 px-3 rounded-lg text-sm font-semibold transition">
-                        ▶ 授權並啟動自主進程
-                    </button>
-                    <button onclick="triggerResetWithProtection()" class="bg-rose-600 hover:bg-rose-500 text-white py-2 px-3 rounded-lg text-sm font-semibold transition">
-                        🔄 徹底清理重設
-                    </button>
-                </div>
-            </div>
-
-            <!-- 數量調節滑桿 -->
-            <div class="flex flex-col justify-between gap-2">
-                <div class="flex justify-between items-center">
-                    <label class="text-sm font-semibold text-slate-300">🎚️ 二元樹最大存活檔數</label>
-                    <span id="max-files-val" class="text-cyan-400 font-bold terminal-font bg-slate-800 px-2 py-0.5 rounded">6</span>
-                </div>
-                <input id="max-files-slider" type="range" min="2" max="15" value="6" oninput="updateMaxFiles(this.value)"
-                    class="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-cyan-400">
-                <span class="text-xs text-slate-500">注入 Python 內部自主邊生邊刪上限</span>
-            </div>
-
-            <!-- 數據統計 -->
-            <div class="flex flex-col justify-between gap-2 bg-slate-950 p-4 rounded-xl border border-slate-800 text-xs">
-                <div class="flex justify-between">
-                    <span class="text-slate-400">當前世代 (GEN):</span>
-                    <span id="stat-gen" class="text-cyan-400 font-bold terminal-font">1</span>
-                </div>
-                <div class="flex justify-between">
-                    <span class="text-slate-400">監控活躍 .py 數:</span>
-                    <span id="stat-py" class="text-emerald-400 font-bold terminal-font">0</span>
-                </div>
-                <div class="flex justify-between">
-                    <span class="text-slate-400">監控活躍 Log 數:</span>
-                    <span id="stat-log" class="text-amber-400 font-bold terminal-font">0</span>
-                </div>
+        <div class="w-full flex justify-between items-center mb-4">
+            <h1 class="text-xl font-bold text-cyan-400 flex items-center gap-2">
+                <span>🐍</span> 貪吃蛇大作戰
+            </h1>
+            <div class="text-sm bg-slate-800 px-3 py-1 rounded-lg border border-slate-700">
+                得分: <span id="score" class="text-emerald-400 font-bold">0</span>
             </div>
         </div>
 
-        <!-- 檔案觀察與 Log 區 -->
-        <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6 border-b border-slate-800">
-            <!-- 實體檔案清單 -->
-            <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 flex flex-col h-72">
-                <h3 class="text-sm font-semibold text-slate-300 mb-3 flex justify-between">
-                    <span>📁 本地硬碟目錄實時狀態</span>
-                    <span class="text-xs text-slate-500" id="dir-name-display">未選擇目錄</span>
-                </h3>
-                <div id="file-list-container" class="terminal-font text-xs overflow-y-auto flex-1 space-y-2 pr-1 text-slate-300">
-                    <div class="text-slate-600 italic">請點擊「授權並啟動」選擇本地資料夾。</div>
-                </div>
-            </div>
+        <!-- 遊戲畫布 -->
+        <canvas id="gameCanvas" width="360" height="360" class="rounded-xl border border-slate-800 mb-4"></canvas>
 
-            <!-- 終端機 Log -->
-            <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 flex flex-col h-72">
-                <h3 class="text-sm font-semibold text-slate-300 mb-3 flex justify-between">
-                    <span>💻 控制台日誌 (Console Log)</span>
-                    <button onclick="clearLogs()" class="text-xs text-slate-500 hover:text-cyan-400">清空</button>
-                </h3>
-                <div id="terminal-log" class="terminal-font text-xs overflow-y-auto flex-1 space-y-1 text-emerald-400 bg-slate-900/80 p-3 rounded-lg border border-slate-800/50">
-                    <div>[System] 準備就緒。自主二元樹引擎等待初始化。</div>
-                </div>
-            </div>
+        <!-- 控制說明 -->
+        <div class="text-xs text-slate-400 text-center mb-4 bg-slate-950 p-3 rounded-xl border border-slate-800 w-full">
+            使用鍵盤方向鍵 <span class="text-cyan-400 font-bold">↑ ↓ ← →</span> 控制方向<br>
+            關閉網頁或重新整理時將會觸發安全確認防護！
         </div>
 
-        <div class="px-6 py-3 bg-slate-950 text-center text-xs text-slate-500 border-t border-slate-800">
-            100% Autonomous Subprocess Engine ｜ Closed-Browser Independent Execution
-        </div>
+        <button onclick="resetGame()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-2.5 px-4 rounded-xl transition shadow-lg shadow-emerald-900/25">
+            重新開始遊戲
+        </button>
     </div>
 
     <script>
-        let dirHandle = null;
-        let isRunning = false;
-        let maxFiles = 6;
-        let sessionId = Math.floor(Date.now() / 1000);
-        let monitorInterval = null;
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
 
-        // 【關鍵優化】真正的自主二元樹 Python 原始碼，子檔案自己執行子檔案，完全無須網頁發號施令
-        function generateAutonomousPythonScript(gen, nodeId, sessionId, maxLimit) {
-            const lines = [
-                `# -*- coding: utf-8 -*-`,
-                `import os`,
-                `import sys`,
-                `import glob`,
-                `import subprocess`,
-                `import time`,
-                `from pathlib import Path`,
-                ``,
-                `GEN = ${gen}`,
-                `NODE_ID = ${nodeId}`,
-                `SESSION_ID = ${sessionId}`,
-                `MAX_LIMIT = ${maxLimit}`,
-                ``,
-                `def main():`,
-                `    current_file = Path(__file__).resolve()`,
-                `    base_dir = current_file.parent`,
-                `    print(f"--- [自主進程執行中] 世代 {GEN} 節點 {NODE_ID} (PID: {os.getpid()}) ---", flush=True)`,
-                ``,
-                `    # 1. 估算下一代左右子節點 (二元樹 *2 指數成長)`,
-                `    next_gen = GEN + 1`,
-                `    left_id = NODE_ID * 2`,
-                `    right_id = NODE_ID * 2 + 1`,
-                ``,
-                `    left_filename = base_dir / f"node_gen{next_gen}_id{left_id}_t{SESSION_ID}.py"`,
-                `    right_filename = base_dir / f"node_gen{next_gen}_id{right_id}_t{SESSION_ID}.py"`,
-                ``,
-                `    try:`,
-                `        # 2. 讀取自身原始碼 (DNA 讀取)`,
-                `        with open(current_file, 'r', encoding='utf-8') as f:`,
-                `            source_code = f.read()`,
-                ``,
-                `        # 3. 突變 DNA 變數 (GEN 與 NODE_ID 遞迴更新)`,
-                `        left_code = source_code.replace(f"GEN = {GEN}", f"GEN = {next_gen}").replace(f"NODE_ID = {NODE_ID}", f"NODE_ID = {left_id}")`,
-                `        right_code = source_code.replace(f"GEN = {GEN}", f"GEN = {next_gen}").replace(f"NODE_ID = {NODE_ID}", f"NODE_ID = {right_id}")`,
-                ``,
-                `        # 4. 子檔案自己寫入硬碟 (*2 產生左右子檔案)`,
-                `        with open(left_filename, 'w', encoding='utf-8') as f:`,
-                `            f.write(left_code)`,
-                `        with open(right_filename, 'w', encoding='utf-8') as f:`,
-                `            f.write(right_code)`,
-                ``,
-                `        # 5. 滾動式邊生邊刪 (.py 檔案)`,
-                `        all_nodes = sorted(base_dir.glob(f"node_gen*_id*_t{SESSION_ID}.py"), key=lambda p: p.stat().st_mtime)`,
-                `        while len(all_nodes) > MAX_LIMIT:`,
-                `            oldest = all_nodes.pop(0)`,
-                `            if oldest != current_file:`,
-                `                try:`,
-                `                    oldest.unlink()`,
-                `                except Exception:`,
-                `                    pass`,
-                ``,
-                `        # 6. 滾動式邊生邊刪 (Log 檔案)`,
-                `        all_logs = sorted(base_dir.glob("log_gen*.txt"), key=lambda p: p.stat().st_mtime)`,
-                `        while len(all_logs) > MAX_LIMIT:`,
-                `            oldest_log = all_logs.pop(0)`,
-                `            try:`,
-                `                oldest_log.unlink()`,
-                `            except Exception:`,
-                `                pass`,
-                ``,
-                `        # 7. 建立左右子進程的獨立 Log`,
-                `        log_left = open(base_dir / f"log_gen{next_gen}_id{left_id}.txt", "w", encoding="utf-8")`,
-                `        log_right = open(base_dir / f"log_gen{next_gen}_id{right_id}.txt", "w", encoding="utf-8")`,
-                ``,
-                `        time.sleep(1)`,
-                `        executable = sys.executable`,
-                `        # 8. 【核心】由 Python 子檔案自己喚醒下兩代子進程！完全脫離網頁！`,
-                `        if left_filename.exists():`,
-                `            subprocess.Popen([executable, str(left_filename)], stdout=log_left, stderr=log_left)`,
-                `        if right_filename.exists():`,
-                `            subprocess.Popen([executable, str(right_filename)], stdout=log_right, stderr=log_right)`,
-                ``,
-                `    except Exception as e:`,
-                `        print(f"例外錯誤: {e}", flush=True)`,
-                ``,
-                `if __name__ == '__main__':`,
-                `    main()`
-            ];
-            return lines.join('\n');
-        }
+        const gridSize = 20;
+        const tileCount = canvas.width / gridSize;
 
-        // 防關閉機制：防止使用者關閉網頁
+        let snake = [
+            { x: 10, y: 10 },
+            { x: 9, y: 10 },
+            { x: 8, y: 10 }
+        ];
+        let food = { x: 5, y: 5 };
+        let dx = 1;
+        let dy = 0;
+        let score = 0;
+        let gameInterval = null;
+        let isGameStarted = true;
+
+        // 【防關閉網頁機制】當遊戲進行中時，嘗試關閉分頁會彈出確認提示
         window.addEventListener('beforeunload', function (e) {
-            if (isRunning) {
+            if (isGameStarted) {
                 e.preventDefault();
-                e.returnValue = '自主二元樹引擎正在作業系統背景狂飆執行中！確定要關閉嗎？';
+                e.returnValue = '遊戲正在進行中！確定要離開或關閉網頁嗎？';
                 return e.returnValue;
             }
         });
 
-        function updateMaxFiles(val) {
-            maxFiles = parseInt(val);
-            document.getElementById('max-files-val').innerText = maxFiles;
-            appendLog(`[設定變更] 滑桿上限調整為: ${maxFiles}（將影響新生成的子代）`);
+        // 監聽鍵盤方向鍵
+        document.addEventListener('keydown', changeDirection);
+
+        function changeDirection(event) {
+            const keyPressed = event.keyCode;
+            const LEFT = 37, UP = 38, RIGHT = 39, DOWN = 40;
+            const A = 65, W = 87, D = 68, S = 83;
+
+            const goingUp = dy === -1;
+            const goingDown = dy === 1;
+            const goingRight = dx === 1;
+            const goingLeft = dx === -1;
+
+            if ((keyPressed === LEFT || keyPressed === A) && !goingRight) { dx = -1; dy = 0; }
+            if ((keyPressed === UP || keyPressed === W) && !goingDown) { dx = 0; dy = -1; }
+            if ((keyPressed === RIGHT || keyPressed === D) && !goingLeft) { dx = 1; dy = 0; }
+            if ((keyPressed === DOWN || keyPressed === S) && !goingUp) { dx = 0; dy = 1; }
         }
 
-        async function initDirectoryAndStart() {
-            if (!window.showDirectoryPicker) {
-                alert("您的瀏覽器不支援 File System Access API，請使用 Chrome 或 Edge！");
+        function main() {
+            if (hasGameEnded()) {
+                alert('遊戲結束！你的最終得分是: ' + score);
+                resetGame();
                 return;
             }
 
-            try {
-                if (!dirHandle) {
-                    dirHandle = await window.showDirectoryPicker();
-                    document.getElementById('dir-name-display').innerText = `目錄: ${dirHandle.name}`;
-                    appendLog(`[授權成功] 已繫結本地目錄: ${dirHandle.name}`);
-                }
-                
-                if (isRunning) return;
-                isRunning = true;
-                document.getElementById('engine-status').className = "px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30";
-                document.getElementById('engine-status').innerText = "● 自主引擎背景狂飆中";
+            setTimeout(() => {
+                clearCanvas();
+                drawFood();
+                moveSnake();
+                drawSnake();
+                main();
+            }, 100);
+        }
 
-                // 點擊後，網頁只負責「寫入第一個根檔案」並啟動它，後續完全交給 Python 自己！
-                const rootPyName = `node_gen1_id1_t${sessionId}.py`;
-                const rootPyCode = generateAutonomousPythonScript(1, 1, sessionId, maxFiles);
-                await createFileInDevice(rootPyName, rootPyCode);
+        function clearCanvas() {
+            ctx.fillStyle = "#0f172a";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
 
-                appendLog(`[根節點建立] 成功產生首代種子檔案: ${rootPyName}`);
-                appendLog(`[自主觸發] 提示：請在本機對 ${rootPyName} 點擊執行，或由系統直接引爆，之後即可關閉網頁！`);
+        function drawSnake() {
+            snake.forEach((part, index) => {
+                ctx.fillStyle = index === 0 ? "#38bdf8" : "#0ea5e9";
+                ctx.fillRect(part.x * gridSize, part.y * gridSize, gridSize - 2, gridSize - 2);
+            });
+        }
 
-                startDirectoryMonitor();
-            } catch (err) {
-                appendLog(`[授權取消/錯誤] ${err.message}`, 'warning');
+        function moveSnake() {
+            const head = { x: snake[0].x + dx, y: snake[0].y + dy };
+            snake.unshift(head);
+
+            if (head.x === food.x && head.y === food.y) {
+                score += 10;
+                document.getElementById('score').innerText = score;
+                generateFood();
+            } else {
+                snake.pop();
             }
         }
 
-        async function createFileInDevice(filename, content) {
-            if (!dirHandle) return;
-            const fileHandle = await dirHandle.getFileHandle(filename, { create: true });
-            const writable = await fileHandle.createWritable();
-            await writable.write(content);
-            await writable.close();
+        function generateFood() {
+            food.x = Math.floor(Math.random() * tileCount);
+            food.y = Math.floor(Math.random() * tileCount);
+            snake.forEach(part => {
+                if (part.x === food.x && part.y === food.y) generateFood();
+            });
         }
 
-        // 僅做為視覺監視器，定期掃描資料夾呈現最新變化
-        function startDirectoryMonitor() {
-            monitorInterval = setInterval(async () => {
-                if (!dirHandle) return;
-                let pyCount = 0;
-                let logCount = 0;
-                let fileListHTML = '';
-                let maxGenSeen = 1;
-
-                for await (const entry of dirHandle.values()) {
-                    if (entry.kind === 'file') {
-                        if (entry.name.startsWith('node_gen')) {
-                            pyCount++;
-                            const match = entry.name.match(/node_gen(\d+)_/);
-                            if (match) maxGenSeen = Math.max(maxGenSeen, parseInt(match[1]));
-                            fileListHTML += `<div class="flex justify-between items-center bg-slate-900 p-2 rounded border border-slate-800">
-                                <span class="text-cyan-300">🐍 ${entry.name}</span>
-                                <span class="text-emerald-400 text-[10px]">自主進程檔</span>
-                            </div>`;
-                        } else if (entry.name.startsWith('log_gen')) {
-                            logCount++;
-                            fileListHTML += `<div class="flex justify-between items-center bg-slate-900 p-2 rounded border border-slate-800">
-                                <span class="text-amber-300">📄 ${entry.name}</span>
-                                <span class="text-amber-400 text-[10px]">進程 Log</span>
-                            </div>`;
-                        }
-                    }
-                }
-
-                document.getElementById('stat-gen').innerText = maxGenSeen;
-                document.getElementById('stat-py').innerText = pyCount;
-                document.getElementById('stat-log').innerText = logCount;
-
-                const container = document.getElementById('file-list-container');
-                container.innerHTML = fileListHTML || `<div class="text-slate-600 italic">（目錄內目前無活動檔案）</div>`;
-            }, 1000);
+        function drawFood() {
+            ctx.fillStyle = "#f43f5e";
+            ctx.fillRect(food.x * gridSize, food.y * gridSize, gridSize - 2, gridSize - 2);
         }
 
-        function triggerResetWithProtection() {
-            // 重設時連續 3 次彈窗確認（防誤觸）
-            for (let i = 1; i <= 3; i++) {
-                if (!confirm(`【安全防護警告 ${i}/3】確定要徹底清理所有自主進程與實體檔案嗎？`)) {
-                    return;
-                }
+        function hasGameEnded() {
+            const head = snake[0];
+            const hitLeftWall = head.x < 0;
+            const hitRightWall = head.x >= tileCount;
+            const hitToptWall = head.y < 0;
+            const hitBottomWall = head.y >= tileCount;
+
+            if (hitLeftWall || hitRightWall || hitToptWall || hitBottomWall) return true;
+
+            for (let i = 4; i < snake.length; i++) {
+                if (snake[i].x === head.x && snake[i].y === head.y) return true;
             }
-            resetEngine();
+            return false;
         }
 
-        async function resetEngine() {
-            isRunning = false;
-            clearInterval(monitorInterval);
-            document.getElementById('engine-status').className = "px-3 py-1 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/30";
-            document.getElementById('engine-status').innerText = "● 已停止重設";
-
-            if (dirHandle) {
-                appendLog(`[徹底清理] 正在刪除所有自主生成之實體檔案...`);
-                for await (const entry of dirHandle.values()) {
-                    if (entry.kind === 'file' && (entry.name.startsWith('node_gen') || entry.name.startsWith('log_gen'))) {
-                        await dirHandle.removeEntry(entry.name);
-                    }
-                }
-            }
-
-            sessionId = Math.floor(Date.now() / 1000);
-            document.getElementById('stat-gen').innerText = 1;
-            document.getElementById('stat-py').innerText = 0;
-            document.getElementById('stat-log').innerText = 0;
-            document.getElementById('file-list-container').innerHTML = `<div class="text-slate-600 italic">（已全數清理）</div>`;
-            appendLog(`[重設完成] 所有進程檔案已安全清除。`);
+        function resetGame() {
+            snake = [
+                { x: 10, y: 10 },
+                { x: 9, y: 10 },
+                { x: 8, y: 10 }
+            ];
+            dx = 1;
+            dy = 0;
+            score = 0;
+            document.getElementById('score').innerText = score;
+            generateFood();
         }
 
-        function appendLog(msg, type = 'normal') {
-            const term = document.getElementById('terminal-log');
-            const colorClass = type === 'warning' ? 'text-amber-400' : 'text-emerald-400';
-            term.innerHTML += `<div class="${colorClass}">[${new Date().toLocaleTimeString()}] ${msg}</div>`;
-            term.scrollTop = term.scrollHeight;
-        }
-
-        function clearLogs() {
-            document.getElementById('terminal-log').innerHTML = '';
-        }
+        generateFood();
+        main();
     </script>
 </body>
 </html>
