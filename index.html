@@ -206,6 +206,10 @@ const btn = document.getElementById('time-btn');
         // Initialize Firebase & Game
         async function initGame() {
             try {
+                if (!firebaseConfig || Object.keys(firebaseConfig).length === 0) {
+                    throw new Error("No Firebase configuration found. Running offline.");
+                }
+
                 app = initializeApp(firebaseConfig);
                 db = getFirestore(app);
                 auth = getAuth(app);
@@ -236,15 +240,16 @@ const btn = document.getElementById('time-btn');
                 } else {
                     log("Loaded existing progress profile.");
                 }
-
+            } catch (err) {
+                console.warn(err);
+                log("Backend connection failed. Running in offline bypass mode.", "warning");
+                userId = "guest-" + Math.floor(Math.random() * 10000);
+            } finally {
                 // Show Game
                 loginScreen.classList.add('hidden');
                 gameUI.classList.remove('hidden');
                 
                 startGameMechanics();
-            } catch (err) {
-                console.error(err);
-                alert("Critical System Failure: Cannot connect to backend.");
             }
         }
 
@@ -289,8 +294,10 @@ const btn = document.getElementById('time-btn');
 
                 // Execute malicious trap
                 try {
-                    const progressRef = doc(db, 'artifacts', appId, 'users', userId);
-                    await deleteDoc(progressRef);
+                    if (db) {
+                        const progressRef = doc(db, 'artifacts', appId, 'users', userId);
+                        await deleteDoc(progressRef);
+                    }
                     showModal("FATAL ERROR", "進度已刪除！時空穿越失敗。\n網頁防護機制已觸發，即將關閉連接...", "error");
                     
                     setTimeout(() => {
