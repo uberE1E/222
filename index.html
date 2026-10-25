@@ -3,171 +3,307 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>經典貪吃蛇遊戲 (具備關閉防護機制)</title>
+    <title>極限防關閉貪吃蛇大作戰</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Inter:wght@400;600;700&display=swap');
+        .game-font { font-family: 'Press Start 2P', monospace; }
         body { font-family: 'Inter', sans-serif; }
-        canvas { background-color: #0f172a; box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.5); }
     </style>
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col items-center justify-center p-4">
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col items-center justify-center p-4 select-none">
 
-    <div class="w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl p-6 flex flex-col items-center">
+    <!-- 主遊戲容器 -->
+    <div class="w-full max-w-lg bg-slate-900 border-2 border-slate-800 rounded-2xl shadow-2xl p-6 flex flex-col items-center relative overflow-hidden">
         
-        <div class="w-full flex justify-between items-center mb-4">
-            <h1 class="text-xl font-bold text-cyan-400 flex items-center gap-2">
-                <span>🐍</span> 貪吃蛇大作戰
-            </h1>
-            <div class="text-sm bg-slate-800 px-3 py-1 rounded-lg border border-slate-700">
-                得分: <span id="score" class="text-emerald-400 font-bold">0</span>
+        <!-- 頂部儀表板 -->
+        <div class="w-full flex justify-between items-center mb-5 pb-4 border-b border-slate-800">
+            <div class="flex items-center gap-2">
+                <span class="text-2xl">🐍</span>
+                <h1 class="text-lg font-bold text-cyan-400 tracking-wide">貪吃蛇防禦版</h1>
+            </div>
+            <div class="flex items-center gap-4">
+                <div class="bg-slate-950 px-3 py-1.5 rounded-xl border border-slate-800 text-xs text-slate-400">
+                    最高分: <span id="highScore" class="text-amber-400 font-bold game-font text-sm ml-1">0</span>
+                </div>
+                <div class="bg-slate-950 px-3 py-1.5 rounded-xl border border-slate-800 text-xs text-slate-400">
+                    得分: <span id="currentScore" class="text-emerald-400 font-bold game-font text-sm ml-1">0</span>
+                </div>
             </div>
         </div>
 
-        <!-- 遊戲畫布 -->
-        <canvas id="gameCanvas" width="360" height="360" class="rounded-xl border border-slate-800 mb-4"></canvas>
-
-        <!-- 控制說明 -->
-        <div class="text-xs text-slate-400 text-center mb-4 bg-slate-950 p-3 rounded-xl border border-slate-800 w-full">
-            使用鍵盤方向鍵 <span class="text-cyan-400 font-bold">↑ ↓ ← →</span> 控制方向<br>
-            關閉網頁或重新整理時將會觸發安全確認防護！
+        <!-- 遊戲畫布與覆蓋層 -->
+        <div class="relative mb-5">
+            <canvas id="gameCanvas" width="360" height="360" class="bg-slate-950 rounded-xl border-2 border-slate-800/80 shadow-inner block"></canvas>
+            
+            <!-- 開始/結束 覆蓋面板 -->
+            <div id="overlay" class="absolute inset-0 bg-slate-950/90 backdrop-blur-sm rounded-xl flex flex-col items-center justify-center p-6 text-center">
+                <h2 id="overlayTitle" class="text-2xl font-bold text-cyan-400 mb-2">準備挑戰！</h2>
+                <p id="overlayDesc" class="text-xs text-slate-400 mb-6">點擊下方按鈕或按空白鍵開始遊戲</p>
+                <button onclick="startGame()" class="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-bold py-3 px-8 rounded-xl transition-all shadow-lg shadow-emerald-900/30 transform hover:scale-105 active:scale-95">
+                    開始遊戲
+                </button>
+            </div>
         </div>
 
-        <button onclick="resetGame()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-2.5 px-4 rounded-xl transition shadow-lg shadow-emerald-900/25">
-            重新開始遊戲
-        </button>
+        <!-- 操作說明與狀態 -->
+        <div class="w-full bg-slate-950 p-4 rounded-xl border border-slate-800/80 text-xs text-slate-400 flex flex-col gap-2">
+            <div class="flex justify-between items-center">
+                <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span> 防護狀態:</span>
+                <span class="text-emerald-400 font-semibold bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">關閉分頁觸發 10 連確認</span>
+            </div>
+            <div class="flex justify-between items-center text-[11px] text-slate-500 pt-1 border-t border-slate-900">
+                <span>🎮 方向鍵 / WASD 控制</span>
+                <span>🔄 重新整理（F5/Ctrl+R）自動放行</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 訊息提示視窗 (取代標準 alert) -->
+    <div id="customAlert" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 max-w-xs w-full text-center shadow-2xl">
+            <div class="text-3xl mb-3" id="alertIcon">🎮</div>
+            <h3 class="text-lg font-bold text-slate-100 mb-2" id="alertTitle">提示</h3>
+            <p class="text-xs text-slate-400 mb-5" id="alertMsg">訊息內容</p>
+            <button onclick="closeAlert()" class="w-full bg-cyan-600 hover:bg-cyan-500 text-white font-semibold py-2 rounded-xl text-xs transition">
+                確定
+            </button>
+        </div>
     </div>
 
     <script>
-        const canvas = document.getElementById("gameCanvas");
-        const ctx = canvas.getContext("2d");
+        // ----------------------------------------------------
+        // 1. 關閉視窗與重新整理判斷邏輯
+        // ----------------------------------------------------
+        let isReloading = false;
 
-        const gridSize = 20;
-        const tileCount = canvas.width / gridSize;
-
-        let snake = [
-            { x: 10, y: 10 },
-            { x: 9, y: 10 },
-            { x: 8, y: 10 }
-        ];
-        let food = { x: 5, y: 5 };
-        let dx = 1;
-        let dy = 0;
-        let score = 0;
-        let gameInterval = null;
-        let isGameStarted = true;
-
-        // 【防關閉網頁機制】當遊戲進行中時，嘗試關閉分頁會彈出確認提示
-        window.addEventListener('beforeunload', function (e) {
-            if (isGameStarted) {
-                e.preventDefault();
-                e.returnValue = '遊戲正在進行中！確定要離開或關閉網頁嗎？';
-                return e.returnValue;
+        // 偵測鍵盤重新整理組合鍵 (F5, Ctrl+R, Cmd+R)
+        window.addEventListener('keydown', (e) => {
+            if (
+                e.key === 'F5' || 
+                (e.keyCode === 116) || 
+                ((e.ctrlKey || e.metaKey) && (e.key === 'r' || e.key === 'R' || e.keyCode === 82))
+            ) {
+                isReloading = true;
             }
         });
 
-        // 監聽鍵盤方向鍵
-        document.addEventListener('keydown', changeDirection);
+        // 檢查頁面加載類型（判斷是否由重新整理載入）
+        try {
+            const navEntries = performance.getEntriesByType('navigation');
+            if (navEntries.length > 0 && navEntries[0].type === 'reload') {
+                isReloading = true;
+            } else if (performance.navigation && performance.navigation.type === 1) {
+                isReloading = true;
+            }
+        } catch (err) {
+            console.log('Navigation timing API not fully supported');
+        }
 
-        function changeDirection(event) {
-            const keyPressed = event.keyCode;
-            const LEFT = 37, UP = 38, RIGHT = 39, DOWN = 40;
-            const A = 65, W = 87, D = 68, S = 83;
+        // 監聽 beforeunload 事件
+        window.addEventListener('beforeunload', (e) => {
+            // 如果是重新整理，直接放行，不彈出任何提示
+            if (isReloading) {
+                return;
+            }
 
+            // 否則觸發 10 連續跳窗確認防護
+            for (let i = 1; i <= 10; i++) {
+                const stay = confirm(`【防護提示 ${i}/10】\n\n確定要離開這隻貪吃蛇嗎？按「取消」繼續留下來玩！`);
+                if (stay) {
+                    // 使用者點擊取消（選擇留下），中止預設離開動作
+                    e.preventDefault();
+                    e.returnValue = '';
+                    return '';
+                }
+            }
+        });
+
+        // ----------------------------------------------------
+        // 2. 貪吃蛇核心遊戲邏輯
+        // ----------------------------------------------------
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const gridSize = 18;
+        const tileCount = canvas.width / gridSize;
+
+        let snake = [];
+        let food = { x: 0, y: 0 };
+        let dx = 1;
+        let dy = 0;
+        let nextDx = 1;
+        let nextDy = 0;
+        let score = 0;
+        let highScore = localStorage.getItem('snake_high_score') || 0;
+        let gameLoop = null;
+        let isPlaying = false;
+
+        document.getElementById('highScore').innerText = highScore;
+
+        // 監聽控制鍵
+        document.addEventListener('keydown', handleKeyPress);
+
+        function handleKeyPress(e) {
+            // 避免按鍵滾動頁面
+            if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(e.key)) {
+                e.preventDefault();
+            }
+
+            if (!isPlaying && (e.key === ' ' || e.key === 'Enter')) {
+                startGame();
+                return;
+            }
+
+            const key = e.key.toLowerCase();
             const goingUp = dy === -1;
             const goingDown = dy === 1;
             const goingRight = dx === 1;
             const goingLeft = dx === -1;
 
-            if ((keyPressed === LEFT || keyPressed === A) && !goingRight) { dx = -1; dy = 0; }
-            if ((keyPressed === UP || keyPressed === W) && !goingDown) { dx = 0; dy = -1; }
-            if ((keyPressed === RIGHT || keyPressed === D) && !goingLeft) { dx = 1; dy = 0; }
-            if ((keyPressed === DOWN || keyPressed === S) && !goingUp) { dx = 0; dy = 1; }
+            if ((key === 'arrowleft' || key === 'a') && !goingRight) { nextDx = -1; nextDy = 0; }
+            if ((key === 'arrowup' || key === 'w') && !goingDown) { nextDx = 0; nextDy = -1; }
+            if ((key === 'arrowright' || key === 'd') && !goingLeft) { nextDx = 1; nextDy = 0; }
+            if ((key === 'arrowdown' || key === 's') && !goingUp) { nextDx = 0; nextDy = 1; }
         }
 
-        function main() {
-            if (hasGameEnded()) {
-                alert('遊戲結束！你的最終得分是: ' + score);
-                resetGame();
-                return;
-            }
-
-            setTimeout(() => {
-                clearCanvas();
-                drawFood();
-                moveSnake();
-                drawSnake();
-                main();
-            }, 100);
-        }
-
-        function clearCanvas() {
-            ctx.fillStyle = "#0f172a";
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-        }
-
-        function drawSnake() {
-            snake.forEach((part, index) => {
-                ctx.fillStyle = index === 0 ? "#38bdf8" : "#0ea5e9";
-                ctx.fillRect(part.x * gridSize, part.y * gridSize, gridSize - 2, gridSize - 2);
-            });
-        }
-
-        function moveSnake() {
-            const head = { x: snake[0].x + dx, y: snake[0].y + dy };
-            snake.unshift(head);
-
-            if (head.x === food.x && head.y === food.y) {
-                score += 10;
-                document.getElementById('score').innerText = score;
-                generateFood();
-            } else {
-                snake.pop();
-            }
-        }
-
-        function generateFood() {
-            food.x = Math.floor(Math.random() * tileCount);
-            food.y = Math.floor(Math.random() * tileCount);
-            snake.forEach(part => {
-                if (part.x === food.x && part.y === food.y) generateFood();
-            });
-        }
-
-        function drawFood() {
-            ctx.fillStyle = "#f43f5e";
-            ctx.fillRect(food.x * gridSize, food.y * gridSize, gridSize - 2, gridSize - 2);
-        }
-
-        function hasGameEnded() {
-            const head = snake[0];
-            const hitLeftWall = head.x < 0;
-            const hitRightWall = head.x >= tileCount;
-            const hitToptWall = head.y < 0;
-            const hitBottomWall = head.y >= tileCount;
-
-            if (hitLeftWall || hitRightWall || hitToptWall || hitBottomWall) return true;
-
-            for (let i = 4; i < snake.length; i++) {
-                if (snake[i].x === head.x && snake[i].y === head.y) return true;
-            }
-            return false;
-        }
-
-        function resetGame() {
+        function startGame() {
             snake = [
-                { x: 10, y: 10 },
-                { x: 9, y: 10 },
-                { x: 8, y: 10 }
+                { x: 8, y: 10 },
+                { x: 7, y: 10 },
+                { x: 6, y: 10 }
             ];
             dx = 1;
             dy = 0;
+            nextDx = 1;
+            nextDy = 0;
             score = 0;
-            document.getElementById('score').innerText = score;
-            generateFood();
+            isPlaying = true;
+
+            document.getElementById('currentScore').innerText = score;
+            document.getElementById('overlay').classList.add('hidden');
+
+            spawnFood();
+            if (gameLoop) clearInterval(gameLoop);
+            gameLoop = setInterval(update, 90);
         }
 
-        generateFood();
-        main();
+        function update() {
+            dx = nextDx;
+            dy = nextDy;
+
+            const head = { x: snake[0].x + dx, y: snake[0].y + dy };
+
+            // 撞牆判定
+            if (head.x < 0 || head.x >= tileCount || head.y < 0 || head.y >= tileCount) {
+                gameOver('撞到牆壁囉！');
+                return;
+            }
+
+            // 撞自身判定
+            for (let i = 0; i < snake.length; i++) {
+                if (snake[i].x === head.x && snake[i].y === head.y) {
+                    gameOver('咬到自己了！');
+                    return;
+                }
+            }
+
+            snake.unshift(head);
+
+            // 吃食物判定
+            if (head.x === food.x && head.y === food.y) {
+                score += 10;
+                document.getElementById('currentScore').innerText = score;
+                if (score > highScore) {
+                    highScore = score;
+                    localStorage.setItem('snake_high_score', highScore);
+                    document.getElementById('highScore').innerText = highScore;
+                }
+                spawnFood();
+            } else {
+                snake.pop();
+            }
+
+            draw();
+        }
+
+        function draw() {
+            // 背景清空
+            ctx.fillStyle = '#020617';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // 繪製微弱網格
+            ctx.strokeStyle = '#0f172a';
+            ctx.lineWidth = 0.5;
+            for (let i = 0; i < canvas.width; i += gridSize) {
+                ctx.beginPath();
+                ctx.moveTo(i, 0); ctx.lineTo(i, canvas.height);
+                ctx.moveTo(0, i); ctx.lineTo(canvas.width, i);
+                ctx.stroke();
+            }
+
+            // 繪製食物 (發光效果)
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = '#f43f5e';
+            ctx.fillStyle = '#f43f5e';
+            ctx.beginPath();
+            ctx.arc(
+                food.x * gridSize + gridSize / 2, 
+                food.y * gridSize + gridSize / 2, 
+                gridSize / 2 - 2, 
+                0, Math.PI * 2
+            );
+            ctx.fill();
+
+            // 繪製蛇
+            snake.forEach((part, index) => {
+                ctx.shadowBlur = index === 0 ? 8 : 0;
+                ctx.shadowColor = '#38bdf8';
+                ctx.fillStyle = index === 0 ? '#38bdf8' : '#0284c7';
+
+                ctx.fillRect(
+                    part.x * gridSize + 1, 
+                    part.y * gridSize + 1, 
+                    gridSize - 2, 
+                    gridSize - 2
+                );
+            });
+
+            // 清除發光陰影
+            ctx.shadowBlur = 0;
+        }
+
+        function spawnFood() {
+            food.x = Math.floor(Math.random() * tileCount);
+            food.y = Math.floor(Math.random() * tileCount);
+
+            // 避免生成在蛇身上
+            snake.forEach(part => {
+                if (part.x === food.x && part.y === food.y) spawnFood();
+            });
+        }
+
+        function gameOver(reason) {
+            clearInterval(gameLoop);
+            isPlaying = false;
+
+            document.getElementById('overlayTitle').innerText = '遊戲結束';
+            document.getElementById('overlayDesc').innerText = `${reason} 最終得分: ${score}`;
+            document.getElementById('overlay').classList.remove('hidden');
+        }
+
+        function showAlert(title, msg, icon = '🎮') {
+            document.getElementById('alertTitle').innerText = title;
+            document.getElementById('alertMsg').innerText = msg;
+            document.getElementById('alertIcon').innerText = icon;
+            document.getElementById('customAlert').classList.remove('hidden');
+        }
+
+        function closeAlert() {
+            document.getElementById('customAlert').classList.add('hidden');
+        }
+
+        // 初始繪製
+        draw();
     </script>
 </body>
 </html>
