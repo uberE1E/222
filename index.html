@@ -3,246 +3,436 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>貪吃蛇遊戲 - 學校投影系統級滑鼠鎖定與 10 次確認防護版</title>
+    <title>Time Paradox - Hack the System</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { font-family: 'Inter', sans-serif; }
-        /* 強制讓畫布維持顯示自訂游標，不被隱藏 */
-        canvas { 
-            background-color: #0f172a; 
-            cursor: default; 
-            box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.5);
+        @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;700&display=swap');
+        
+        body {
+            font-family: 'Fira Code', monospace;
+            background-color: #050505;
+            color: #0f0;
+            overflow: hidden;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+
+        /* Custom Scrollbar for Terminal */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #001100; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #00aa00; 
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #00ff00; 
+        }
+
+        .crt-effect {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            background-size: 100% 2px, 3px 100%;
+            pointer-events: none;
+            z-index: 50;
+        }
+
+        #time-btn {
+            transition: all 0.1s ease-out;
+            cursor: crosshair;
+        }
+
+        .glitch-text {
+            animation: glitch 1s linear infinite;
+        }
+
+        @keyframes glitch {
+            2%, 64% { transform: translate(2px, 0) skew(0deg); }
+            4%, 60% { transform: translate(-2px, 0) skew(0deg); }
+            62% { transform: translate(0, 0) skew(5deg); }
+        }
+
+        /* Modal styling to avoid standard alerts */
+        #custom-modal {
+            backdrop-filter: blur(10px);
+            z-index: 100;
         }
     </style>
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col items-center justify-center p-4 select-none">
+<body class="h-screen w-screen flex flex-col">
+    <div class="crt-effect"></div>
 
-    <div class="w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl p-6 flex flex-col items-center">
-        
-        <div class="w-full flex justify-between items-center mb-4">
-            <h1 class="text-xl font-bold text-cyan-400 flex items-center gap-2">
-                <span>🐍</span> 貪吃蛇 (投影系統防護版)
-            </h1>
-            <div class="text-sm bg-slate-800 px-3 py-1 rounded-lg border border-slate-700">
-                得分: <span id="score" class="text-emerald-400 font-bold">0</span>
-            </div>
-        </div>
-
-        <!-- 遊戲畫布與鎖定遮罩 -->
-        <div class="relative mb-4">
-            <canvas id="gameCanvas" width="360" height="360" class="rounded-xl border border-slate-800"></canvas>
-            <div id="lockOverlay" class="absolute inset-0 bg-slate-950/90 rounded-xl flex flex-col items-center justify-center p-6 text-center cursor-pointer border border-cyan-500/30">
-                <div class="text-3xl mb-2">🔒</div>
-                <div class="text-cyan-400 font-bold text-base mb-1">系統全螢幕焦點鎖定</div>
-                <div class="text-xs text-slate-400">點擊此處以啟用防護模式並開始遊戲<br>（游標將被強行限制在網頁範圍內）</div>
-            </div>
-        </div>
-
-        <!-- 控制說明 -->
-        <div class="text-xs text-slate-400 text-center mb-4 bg-slate-950 p-3 rounded-xl border border-slate-800 w-full space-y-1">
-            <p>• 移動控制：鍵盤方向鍵 <span class="text-cyan-400 font-bold">↑ ↓ ← →</span></p>
-            <p>• 重新整理 (<span class="text-emerald-400 font-bold">F5 / Ctrl+R</span>)：直接放行無提示</p>
-            <p>• 嘗試離開/解鎖 (<span class="text-rose-400 font-bold">Esc / 點擊外部 / 關閉</span>)：連續觸發 <span class="text-rose-400 font-bold">10 次確認對話框</span></p>
-        </div>
-
-        <button onclick="manualReset()" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold py-2 px-4 rounded-xl transition text-xs border border-slate-700">
-            重新開始遊戲 (不彈窗)
+    <!-- Login Screen -->
+    <div id="login-screen" class="absolute inset-0 flex flex-col items-center justify-center bg-black z-40">
+        <h1 class="text-5xl mb-8 glitch-text text-red-500 font-bold">SYSTEM BOOT // TIME PARADOX</h1>
+        <p class="mb-8 text-green-400">Authenticating user credentials via Firebase...</p>
+        <button id="login-btn" class="px-6 py-3 border-2 border-green-500 text-green-500 hover:bg-green-500 hover:text-black transition-colors font-bold uppercase tracking-widest">
+            Initialize Link
         </button>
     </div>
 
-    <script>
-        const canvas = document.getElementById("gameCanvas");
-        const ctx = canvas.getContext("2d");
-        const lockOverlay = document.getElementById("lockOverlay");
+    <!-- Main Game Interface -->
+    <div id="game-ui" class="hidden flex-1 grid grid-cols-1 md:grid-cols-2 w-full h-full relative z-10">
+        
+        <!-- Left Panel: The Trap -->
+        <div id="left-panel" class="relative overflow-hidden bg-gray-900 border-r-2 border-green-800 flex items-center justify-center shadow-[inset_0_0_50px_rgba(0,0,0,0.8)]">
+            <div class="absolute top-2 left-2 text-xs text-gray-500 opacity-50">AREA: TARGET_ZONE</div>
+            
+            <button id="time-btn" class="absolute px-6 py-3 bg-red-700 text-white font-bold tracking-widest border border-red-500 shadow-[0_0_15px_#ff0000] rounded-sm transform -translate-x-1/2 -translate-y-1/2" style="top: 50%; left: 50%;">
+                時空穿越
+            </button>
+        </div>
 
-        window.isRefreshing = false;
-        let isDefenseExecuting = false;
+        <!-- Right Panel: Hacking Interface -->
+        <div id="right-panel" class="flex flex-col bg-black p-4 h-full">
+            <div class="flex justify-between items-center mb-2">
+                <span class="text-sm text-green-600">>> NEURAL_LINK_TERMINAL v2.0</span>
+                <span class="text-xs text-red-500 animate-pulse">WARNING: ACTIVE AI DEFENSE</span>
+            </div>
+            
+            <textarea id="code-editor" class="flex-1 bg-gray-950 border border-green-800 text-green-400 p-4 font-mono text-sm resize-none focus:outline-none focus:border-green-500" spellcheck="false">
+// 系統提示: 目標按鈕 id 為 'time-btn'
+// 直接點擊會觸發陷阱並刪除進度
+// 撰寫程式碼來駭入或繞過點擊事件，然後提交給AI驗證
 
-        // 觸發連續 10 次原生 confirm() 迴圈防護
-        function execute10StepConfirmDefense(triggerReason) {
-            if (isDefenseExecuting) return false;
-            isDefenseExecuting = true;
+const btn = document.getElementById('time-btn');
 
-            let passedAll = true;
-            for (let i = 1; i <= 10; i++) {
-                const userChoice = confirm(`【安全防護警告 ${i}/10】\n偵測到嘗試脫離系統控制：${triggerReason}\n確定要離開或解鎖嗎？`);
-                if (!userChoice) {
-                    passedAll = false;
-                    alert(`[防護成功] 您已在第 ${i}/10 次確認時點擊取消，系統強制保留鎖定！`);
-                    break;
-                }
-            }
+// Your code here...
+</textarea>
 
-            if (!passedAll) {
-                // 若取消離開，立刻重新強制鎖定滑鼠與焦點
-                requestSystemLock();
-            }
+            <div class="flex gap-4 mt-4">
+                <button id="exec-btn" class="flex-1 border border-cyan-500 text-cyan-500 py-2 hover:bg-cyan-900 transition-colors">
+                    > Execute Code Locally
+                </button>
+                <button id="submit-bug-btn" class="flex-1 border border-purple-500 text-purple-500 py-2 hover:bg-purple-900 transition-colors">
+                    > Submit Bug to AI
+                </button>
+            </div>
 
-            isDefenseExecuting = false;
-            return passedAll;
-        }
+            <!-- Terminal Output -->
+            <div id="terminal" class="mt-4 h-48 bg-gray-950 border border-green-900 p-2 overflow-y-auto text-xs flex flex-col gap-1">
+                <div class="text-green-600">> System Initialized. Awaiting input.</div>
+            </div>
+        </div>
+    </div>
 
-        // 請求指標鎖定與全螢幕焦點
-        function requestSystemLock() {
-            canvas.requestPointerLock().catch(err => {
-                console.log("鎖定請求被拒絕:", err);
-            });
-        }
+    <!-- Custom Modal -->
+    <div id="custom-modal" class="hidden fixed inset-0 flex items-center justify-center bg-black bg-opacity-80">
+        <div class="bg-gray-900 border-4 border-green-500 p-8 max-w-lg w-full text-center shadow-[0_0_30px_rgba(0,255,0,0.3)]">
+            <h2 id="modal-title" class="text-3xl font-bold mb-4">Notification</h2>
+            <p id="modal-msg" class="mb-6 whitespace-pre-wrap text-lg"></p>
+            <button id="modal-close" class="px-6 py-2 bg-green-900 text-white font-bold hover:bg-green-700 border border-green-400">ACKNOWLEDGE</button>
+        </div>
+    </div>
 
-        // 點擊遮罩解鎖並進入鎖定狀態
-        lockOverlay.addEventListener('click', () => {
-            requestSystemLock();
-        });
+    <script type="module">
+        // Firebase Imports
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInWithCustomToken, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // 監聽指標鎖定狀態：當玩家按 Esc 或企圖移出時觸發 10 次警告
-        document.addEventListener('pointerlockchange', () => {
-            if (document.pointerLockElement === canvas) {
-                lockOverlay.style.display = 'none';
+        // Global Setup
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'time-paradox-app';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+        let initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        
+        let app, db, auth, userId;
+        let cheatActive = false;
+        let aiDefenseInterval = null;
+        
+        // DOM Elements
+        const loginScreen = document.getElementById('login-screen');
+        const gameUI = document.getElementById('game-ui');
+        const loginBtn = document.getElementById('login-btn');
+        const leftPanel = document.getElementById('left-panel');
+        const timeBtn = document.getElementById('time-btn');
+        const terminal = document.getElementById('terminal');
+        const codeEditor = document.getElementById('code-editor');
+        const execBtn = document.getElementById('exec-btn');
+        const submitBugBtn = document.getElementById('submit-bug-btn');
+        
+        const modal = document.getElementById('custom-modal');
+        const modalTitle = document.getElementById('modal-title');
+        const modalMsg = document.getElementById('modal-msg');
+        const modalClose = document.getElementById('modal-close');
+
+        // Gemini API Config
+        const geminiApiKey = ""; // Required to be empty for platform injection
+        const geminiApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${geminiApiKey}`;
+
+        // Utility: Show Modal
+        function showModal(title, msg, type = 'info') {
+            modalTitle.innerText = title;
+            modalMsg.innerText = msg;
+            
+            if(type === 'error') {
+                modal.querySelector('div').className = "bg-gray-900 border-4 border-red-500 p-8 max-w-lg w-full text-center shadow-[0_0_40px_rgba(255,0,0,0.5)]";
+                modalTitle.className = "text-3xl font-bold mb-4 text-red-500";
+            } else if (type === 'success') {
+                modal.querySelector('div').className = "bg-gray-900 border-4 border-green-500 p-8 max-w-lg w-full text-center shadow-[0_0_40px_rgba(0,255,0,0.5)]";
+                modalTitle.className = "text-3xl font-bold mb-4 text-green-500";
             } else {
-                lockOverlay.style.display = 'flex';
-                if (!window.isRefreshing && !isDefenseExecuting) {
-                    setTimeout(() => {
-                        execute10StepConfirmDefense("嘗試解除滑鼠指標鎖定");
-                    }, 10);
-                }
+                modal.querySelector('div').className = "bg-gray-900 border-4 border-blue-500 p-8 max-w-lg w-full text-center shadow-[0_0_40px_rgba(0,0,255,0.5)]";
+                modalTitle.className = "text-3xl font-bold mb-4 text-blue-500";
             }
-        });
+            
+            modal.classList.remove('hidden');
+        }
 
-        // 額外保險：當滑鼠游標嘗試移出畫布邊界時，強制拉回中心並警告
-        canvas.addEventListener('mouseleave', (e) => {
-            if (!window.isRefreshing && !isDefenseExecuting && document.pointerLockElement !== canvas) {
-                setTimeout(() => {
-                    execute10StepConfirmDefense("滑鼠游標企圖移出防護視窗");
-                }, 10);
-            }
-        });
+        modalClose.onclick = () => modal.classList.add('hidden');
 
-        // 1. 精準監聽按鍵事件 (攔截快捷鍵，放行 F5/Ctrl+R)
-        window.addEventListener('keydown', function (e) {
-            const isF5 = e.key === 'F5';
-            const isCtrlR = (e.ctrlKey || e.metaKey) && (e.key === 'r' || e.key === 'R');
+        // Utility: Log to Terminal
+        function log(msg, type = 'info') {
+            const p = document.createElement('div');
+            const time = new Date().toLocaleTimeString();
+            p.innerText = `[${time}] ${msg}`;
+            if (type === 'error') p.classList.add('text-red-500');
+            else if (type === 'warning') p.classList.add('text-yellow-500');
+            else if (type === 'success') p.classList.add('text-cyan-400');
+            else p.classList.add('text-green-500');
+            
+            terminal.appendChild(p);
+            terminal.scrollTop = terminal.scrollHeight;
+        }
 
-            if (isF5 || isCtrlR) {
-                window.isRefreshing = true;
-                return; // 重新整理放行
-            }
-
-            const isCtrlW = (e.ctrlKey || e.metaKey) && (e.key === 'w' || e.key === 'W');
-            const isAltF4 = e.altKey && e.key === 'F4';
-
-            if (isCtrlW || isAltF4) {
-                e.preventDefault();
-                e.stopPropagation();
+        // Initialize Firebase & Game
+        async function initGame() {
+            try {
+                app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
                 
-                setTimeout(() => {
-                    execute10StepConfirmDefense("使用了關閉分頁快捷鍵");
-                }, 10);
+                log("Authenticating...", "warning");
+                
+                if (initialAuthToken) {
+                    await signInWithCustomToken(auth, initialAuthToken);
+                } else {
+                    await signInAnonymously(auth);
+                }
+                
+                userId = auth.currentUser.uid;
+                log(`Auth successful. UserID: ${userId.substring(0,8)}...`, "success");
+                
+                // Save/Load Progress
+                const progressRef = doc(db, 'artifacts', appId, 'users', userId, 'progress');
+                const docSnap = await getDoc(progressRef);
+                if (!docSnap.exists()) {
+                    await setDoc(progressRef, { attempts: 0, level: 1, lastLogin: new Date().toISOString() });
+                    log("Created new progress profile.");
+                } else {
+                    log("Loaded existing progress profile.");
+                }
+
+                // Show Game
+                loginScreen.classList.add('hidden');
+                gameUI.classList.remove('hidden');
+                
+                startGameMechanics();
+            } catch (err) {
+                console.error(err);
+                alert("Critical System Failure: Cannot connect to backend.");
+            }
+        }
+
+        loginBtn.onclick = () => {
+            loginBtn.innerText = "CONNECTING...";
+            loginBtn.disabled = true;
+            initGame();
+        };
+
+        // Core Game Mechanics: The Evasive Button
+        function startGameMechanics() {
+            leftPanel.addEventListener('mousemove', (e) => {
+                if (cheatActive) return;
+                
+                const rect = timeBtn.getBoundingClientRect();
+                const btnX = rect.left + rect.width / 2;
+                const btnY = rect.top + rect.height / 2;
+                
+                // Calculate distance
+                const dist = Math.hypot(e.clientX - btnX, e.clientY - btnY);
+                
+                if (dist < 300) {
+                    // Evasion move
+                    const maxW = leftPanel.clientWidth - rect.width;
+                    const maxH = leftPanel.clientHeight - rect.height;
+                    const newX = Math.random() * maxW;
+                    const newY = Math.random() * maxH;
+                    
+                    timeBtn.style.left = `${newX}px`;
+                    timeBtn.style.top = `${newY}px`;
+                    timeBtn.style.transform = `scale(${0.8 + Math.random() * 0.4})`;
+                }
+            });
+
+            // The TRAP
+            timeBtn.onclick = async (e) => {
+                if (cheatActive) {
+                    showModal("OVERRIDE SUCCESS", "進入破解版模式，安全穿越！\n資料庫存取已繞過。", "success");
+                    return;
+                }
+
+                // Execute malicious trap
+                try {
+                    const progressRef = doc(db, 'artifacts', appId, 'users', userId, 'progress');
+                    await deleteDoc(progressRef);
+                    showModal("FATAL ERROR", "進度已刪除！時空穿越失敗。\n網頁防護機制已觸發，即將關閉連接...", "error");
+                    
+                    setTimeout(() => {
+                        window.close();
+                        // Fallback if window.close is blocked
+                        document.body.innerHTML = '<div style="color:red; font-size: 5rem; text-align:center; margin-top:20vh; font-family: monospace;">CONNECTION TERMINATED.<br>YOUR DATA IS GONE.</div>';
+                    }, 4000);
+                } catch (err) {
+                    log("Trap executed, but failed to reach DB.", "error");
+                }
+            };
+
+            // Start AI Opponent Loop
+            aiDefenseInterval = setInterval(updateAIDefense, 45000);
+            log("Game loops initialized. AI defense active.", "info");
+        }
+
+        // Code Execution Handler
+        execBtn.onclick = () => {
+            const code = codeEditor.value;
+            try {
+                log("Executing local script...");
+                // Create a localized scope to execute the code safely
+                const execFunc = new Function('timeBtn', 'log', code);
+                execFunc(timeBtn, log);
+                log("Script executed successfully.", "success");
+            } catch (err) {
+                log(`Execution Error: ${err.message}`, "error");
+            }
+        };
+
+        // Submit to AI Handler
+        submitBugBtn.onclick = async () => {
+            const code = codeEditor.value;
+            if (!code.trim()) {
+                log("Error: Empty code block.", "error");
+                return;
+            }
+
+            log("Uplinking code to AI Core for validation...", "warning");
+            submitBugBtn.disabled = true;
+            submitBugBtn.innerText = "Analyzing...";
+
+            const systemPrompt = `You are evaluating a player's JS code for a hacking puzzle game. The player needs to click a button with id 'time-btn' OR bypass its onclick deletion trap so their account data is kept safe. Analyze their submitted code. If it successfully overrides the onclick, removes the event listener, safely clicks it programmatically after disarming, or generally achieves the goal of interacting with the button without triggering a data deletion script, reply with ONLY 'SUCCESS: <explanation of how they won>'. Otherwise, reply 'FAIL: <reason why it doesn't work or still triggers the trap>'. DO NOT use markdown code blocks in your response.`;
+
+            const payload = {
+                contents: [{ parts: [{ text: code }] }],
+                systemInstruction: { parts: [{ text: systemPrompt }] }
+            };
+
+            try {
+                const response = await fetch(geminiApiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                const result = await response.json();
+                const reply = result.candidates?.[0]?.content?.parts?.[0]?.text || "FAIL: AI Core unresponsive.";
+                
+                if (reply.trim().startsWith("SUCCESS")) {
+                    clearInterval(aiDefenseInterval);
+                    showModal("通關成功！", "進度已保留並完成時空穿越！\n\n[AI 判定]:\n" + reply, "success");
+                    log("SYSTEM COMPROMISED. PLAYER WINS.", "success");
+                } else {
+                    log(`AI VERDICT: ${reply}`, "error");
+                    showModal("HACK FAILED", reply, "error");
+                }
+            } catch (err) {
+                log(`Uplink failed: ${err.message}`, "error");
+            } finally {
+                submitBugBtn.disabled = false;
+                submitBugBtn.innerText = "> Submit Bug to AI";
+            }
+        };
+
+        // Dynamic AI Opponent Logic
+        async function updateAIDefense() {
+            if (cheatActive) return;
+            log("Warning: Enemy AI is generating new defense countermeasures...", "warning");
+
+            const aiPrompt = `You are an adversarial AI in a hacking game. Your job is to output EXACTLY 1 to 3 lines of JavaScript code to make the HTML element with id 'time-btn' significantly harder to click or find. You can modify its CSS styles (opacity, transform, animation, z-index, filters). Assume 'document.getElementById("time-btn")' is used to get the button. Do NOT remove or delete the button. Do NOT use backticks, quotes, or markdown block formatting. Output ONLY raw executable JavaScript code.`;
+
+            const payload = {
+                contents: [{ parts: [{ text: aiPrompt }] }]
+            };
+
+            try {
+                const response = await fetch(geminiApiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                const result = await response.json();
+                let newCode = result.candidates?.[0]?.content?.parts?.[0]?.text || "";
+                
+                // Clean up AI output just in case it wraps it in markdown
+                newCode = newCode.replace(/```javascript/gi, '').replace(/```/g, '').trim();
+                
+                if (newCode) {
+                    const aiFunc = new Function(newCode);
+                    aiFunc();
+                    log("Enemy AI Defense Protocol Updated!", "error");
+                }
+            } catch (err) {
+                log(`AI Defense Update dropped: ${err.message}`);
+            }
+        }
+
+        // Cheat Code Keylogger
+        let keyBuffer = '';
+        window.addEventListener('keydown', (e) => {
+            keyBuffer += e.key;
+            if (keyBuffer.length > 10) keyBuffer = keyBuffer.slice(-10);
+            
+            if (keyBuffer.includes('uber-1')) {
+                activateCheat();
+                keyBuffer = '';
             }
         });
 
-        // 2. beforeunload 備用防線 (重新整理時放行)
-        window.addEventListener('beforeunload', function (e) {
-            if (!window.isRefreshing) {
-                e.preventDefault();
-                e.returnValue = '確定要離開此網站嗎？';
-                return e.returnValue;
-            }
-        });
-
-        // ----------------- 貪吃蛇遊戲邏輯 (無結束彈窗) -----------------
-        const gridSize = 20;
-        const tileCount = canvas.width / gridSize;
-
-        let snake = [{ x: 10, y: 10 }, { x: 9, y: 10 }, { x: 8, y: 10 }];
-        let food = { x: 5, y: 5 };
-        let dx = 1, dy = 0, score = 0;
-
-        document.addEventListener('keydown', changeDirection);
-
-        function changeDirection(event) {
-            const keyPressed = event.keyCode;
-            const LEFT = 37, UP = 38, RIGHT = 39, DOWN = 40;
-            const A = 65, W = 87, D = 68, S = 83;
-
-            if ((keyPressed === LEFT || keyPressed === A) && dx !== 1) { dx = -1; dy = 0; }
-            if ((keyPressed === UP || keyPressed === W) && dy !== 1) { dx = 0; dy = -1; }
-            if ((keyPressed === RIGHT || keyPressed === D) && dx !== -1) { dx = 1; dy = 0; }
-            if ((keyPressed === DOWN || keyPressed === S) && dy !== -1) { dx = 0; dy = 1; }
+        function activateCheat() {
+            if (cheatActive) return;
+            cheatActive = true;
+            clearInterval(aiDefenseInterval);
+            
+            // Revert button to safe state
+            timeBtn.style.transition = 'all 1s ease';
+            timeBtn.style.transform = 'translate(-50%, -50%) scale(1.5)';
+            timeBtn.style.left = '50%';
+            timeBtn.style.top = '50%';
+            timeBtn.style.backgroundColor = '#00ff00';
+            timeBtn.style.boxShadow = '0 0 40px #00ff00';
+            timeBtn.style.color = '#000';
+            timeBtn.style.border = 'none';
+            timeBtn.style.pointerEvents = 'auto';
+            timeBtn.style.filter = 'none';
+            timeBtn.style.opacity = '1';
+            timeBtn.innerText = '安全穿越 (CRACKED)';
+            
+            log("=========================================", "success");
+            log(" ROOT OVERRIDE ACCEPTED.", "success");
+            log(" CHEAT CODE 'uber-1' ACTIVATED.", "success");
+            log(" EVASION LOGIC DISABLED. TRAP DISARMED.", "success");
+            log("=========================================", "success");
+            
+            showModal("SYSTEM CRACKED", "進入破解版模式\n所有防護機制已停用。", "success");
         }
 
-        function gameLoop() {
-            if (hasGameEnded()) {
-                // 遊戲結束時「不跳彈窗」，直接無縫重置遊戲並保留分數清零或懲罰
-                resetGameSilently();
-            } else {
-                clearCanvas();
-                drawFood();
-                moveSnake();
-                drawSnake();
-            }
-            setTimeout(gameLoop, 110);
-        }
-
-        function clearCanvas() {
-            ctx.fillStyle = "#0f172a";
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-        }
-
-        function drawSnake() {
-            snake.forEach((part, index) => {
-                ctx.fillStyle = index === 0 ? "#38bdf8" : "#0ea5e9";
-                ctx.fillRect(part.x * gridSize, part.y * gridSize, gridSize - 2, gridSize - 2);
-            });
-        }
-
-        function moveSnake() {
-            const head = { x: snake[0].x + dx, y: snake[0].y + dy };
-            snake.unshift(head);
-
-            if (head.x === food.x && head.y === food.y) {
-                score += 10;
-                document.getElementById('score').innerText = score;
-                generateFood();
-            } else {
-                snake.pop();
-            }
-        }
-
-        function generateFood() {
-            food.x = Math.floor(Math.random() * tileCount);
-            food.y = Math.floor(Math.random() * tileCount);
-            snake.forEach(part => {
-                if (part.x === food.x && part.y === food.y) generateFood();
-            });
-        }
-
-        function drawFood() {
-            ctx.fillStyle = "#f43f5e";
-            ctx.fillRect(food.x * gridSize, food.y * gridSize, gridSize - 2, gridSize - 2);
-        }
-
-        function hasGameEnded() {
-            const head = snake[0];
-            if (head.x < 0 || head.x >= tileCount || head.y < 0 || head.y >= tileCount) return true;
-            for (let i = 4; i < snake.length; i++) {
-                if (snake[i].x === head.x && snake[i].y === head.y) return true;
-            }
-            return false;
-        }
-
-        function resetGameSilently() {
-            snake = [{ x: 10, y: 10 }, { x: 9, y: 10 }, { x: 8, y: 10 }];
-            dx = 1; dy = 0; score = 0;
-            document.getElementById('score').innerText = score;
-            generateFood();
-        }
-
-        function manualReset() {
-            resetGameSilently();
-        }
-
-        generateFood();
-        gameLoop();
     </script>
 </body>
 </html>
