@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>極限防關閉貪吃蛇大作戰</title>
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Inter:wght@400;600;700&display=swap');
@@ -46,35 +47,29 @@
             </div>
         </div>
 
+        <!-- 觸控/虛擬鍵盤操作按紐 (適用行動裝置) -->
+        <div class="grid grid-cols-3 gap-2 w-full max-w-[200px] mb-4 sm:hidden">
+            <div></div>
+            <button onclick="handleDirection('up')" class="bg-slate-800 active:bg-slate-700 py-3 rounded-lg text-lg font-bold border border-slate-700 shadow">▲</button>
+            <div></div>
+            <button onclick="handleDirection('left')" class="bg-slate-800 active:bg-slate-700 py-3 rounded-lg text-lg font-bold border border-slate-700 shadow">◀</button>
+            <button onclick="handleDirection('down')" class="bg-slate-800 active:bg-slate-700 py-3 rounded-lg text-lg font-bold border border-slate-700 shadow">▼</button>
+            <button onclick="handleDirection('right')" class="bg-slate-800 active:bg-slate-700 py-3 rounded-lg text-lg font-bold border border-slate-700 shadow">▶</button>
+        </div>
+
         <!-- 操作說明與狀態 -->
         <div class="w-full bg-slate-950 p-4 rounded-xl border border-slate-800/80 text-xs text-slate-400 flex flex-col gap-2">
             <div class="flex justify-between items-center">
-                <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span> 防護狀態:</span>
-                <span class="text-emerald-400 font-semibold bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">關閉分頁觸發 10 連確認</span>
+                <span class="flex items-center gap-1.5">
+                    <span id="statusIndicator" class="w-2 h-2 rounded-full bg-slate-500"></span> 防護狀態:
+                </span>
+                <span id="statusText" class="text-slate-400 font-semibold bg-slate-800/50 px-2 py-0.5 rounded border border-slate-700">
+                    未互動（未綁定關閉防護）
+                </span>
             </div>
-            <div class="flex justify-between items-center text-[11px] text-slate-500 pt-1 border-t border-slate-900">
+            <div class="flex justify-between items-center text-[11px] text-slate-500 pt-2 border-t border-slate-900">
                 <span>🎮 方向鍵 / WASD 控制</span>
-                <span>🔄 重新整理（F5/Ctrl+R/刷新按鈕）自動放行</span>
-            </div>
-        </div>
-    </div>
-
-    <!-- 自訂 10 連確認彈窗 (針對滑鼠離開/關閉動作處理) -->
-    <div id="exitModal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md hidden flex items-center justify-center p-4 z-50">
-        <div class="bg-slate-900 border-2 border-rose-500/50 rounded-2xl p-6 max-w-sm w-full text-center shadow-2xl relative animate-bounce-short">
-            <div class="text-4xl mb-3">⚠️</div>
-            <h3 class="text-lg font-bold text-rose-400 mb-1" id="exitTitle">防護警告</h3>
-            <p class="text-xs text-slate-300 font-semibold mb-4" id="exitProgress">確定要關閉網頁嗎？ (1/10)</p>
-            <p class="text-[11px] text-slate-400 mb-6 bg-slate-950 p-3 rounded-xl border border-slate-800">
-                您正試圖離開遊戲！必須連續確認 10 次才能離開。
-            </p>
-            <div class="flex gap-3">
-                <button onclick="cancelExit()" class="w-1/2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 rounded-xl text-xs transition shadow-lg shadow-emerald-900/30">
-                    留下來玩
-                </button>
-                <button onclick="confirmExitStep()" class="w-1/2 bg-rose-600 hover:bg-rose-500 text-white font-bold py-2.5 rounded-xl text-xs transition shadow-lg shadow-rose-900/30">
-                    確定離開
-                </button>
+                <span>🔄 重新整理（F5/Ctrl+R）自動放行</span>
             </div>
         </div>
     </div>
@@ -116,11 +111,25 @@
         }
 
         // ----------------------------------------------------
-        // 2. 關閉與重新整理精準判斷機制
+        // 2. 使用者互動偵測 & 防關閉機制 (beforeunload)
         // ----------------------------------------------------
         let isRefreshing = false;
+        let isProtectionActive = false;
 
-        // A. 偵測鍵盤重新整理熱鍵 (F5, Ctrl+R, Cmd+R)
+        // 啟用瀏覽器防關閉攔截
+        function activateProtection() {
+            if (isProtectionActive) return;
+            isProtectionActive = true;
+
+            const indicator = document.getElementById('statusIndicator');
+            const statusText = document.getElementById('statusText');
+
+            indicator.className = 'w-2 h-2 rounded-full bg-emerald-500 animate-ping';
+            statusText.className = 'text-emerald-400 font-semibold bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20';
+            statusText.innerText = '原生離開確認防護已啟用';
+        }
+
+        // A. 偵測重新整理熱鍵 (F5, Ctrl+R, Cmd+R)
         window.addEventListener('keydown', (e) => {
             if (
                 e.key === 'F5' || 
@@ -131,71 +140,33 @@
             }
         });
 
-        // B. 偵測瀏覽器重新整理 (透過 Performance Navigation API)
+        // B. 偵測 Navigation Timing API 判斷 reload
         try {
             const navEntries = performance.getEntriesByType('navigation');
             if (navEntries.length > 0 && navEntries[0].type === 'reload') {
-                isRefreshing = true;
-            } else if (performance.navigation && performance.navigation.type === 1) {
                 isRefreshing = true;
             }
         } catch (err) {
             console.log('Navigation timing API verified');
         }
 
-        // C. 監聽前台分頁切換/滑鼠移開視窗頂部 (捕捉試圖關閉視窗的意圖)
-        let exitStep = 1;
-        const exitModal = document.getElementById('exitModal');
-
-        document.addEventListener('mouseleave', (e) => {
-            if (e.clientY <= 10 && !isRefreshing) {
-                trigger10StepExitModal();
-            }
+        // C. 綁定全域點擊/按鍵手勢以激活防護
+        ['pointerdown', 'keydown', 'touchstart'].forEach(eventType => {
+            window.addEventListener(eventType, () => activateProtection(), { once: true });
         });
 
-        function trigger10StepExitModal() {
-            if (isRefreshing) return;
-            exitStep = 1;
-            updateExitModal();
-            exitModal.classList.remove('hidden');
-        }
-
-        function updateExitModal() {
-            document.getElementById('exitProgress').innerText = `確定要關閉網頁嗎？ (${exitStep}/10)`;
-        }
-
-        function confirmExitStep() {
-            if (exitStep < 10) {
-                exitStep++;
-                updateExitModal();
-            } else {
-                // 完成 10 次確認後關閉彈窗放行
-                exitModal.classList.add('hidden');
-                alert("已完成 10 次確認，已解除關閉防護！");
-            }
-        }
-
-        function cancelExit() {
-            exitStep = 1;
-            exitModal.classList.add('hidden');
-        }
-
-        // D. 標準 beforeunload 事件處置
+        // D. 瀏覽器 beforeunload 原生離開確認
         window.addEventListener('beforeunload', (e) => {
-            // 如果是重新整理，直接放行，不顯示任何防護提示
+            // 如果使用者進行重新整理 (F5/Ctrl+R)，放行不提示
             if (isRefreshing) {
                 return;
             }
 
-            // 觸發原生 10 連續跳窗確認
-            for (let i = 1; i <= 10; i++) {
-                const stay = confirm(`確定要關閉網頁嗎？ (${i}/10)\n\n按「取消」繼續留下來玩！`);
-                if (stay) {
-                    // 使用者點擊取消（選擇留下）
-                    e.preventDefault();
-                    e.returnValue = '';
-                    return '';
-                }
+            // 只有在防護激活且非重整時，觸發原生離開提示視窗
+            if (isProtectionActive) {
+                e.preventDefault();
+                e.returnValue = ''; // 現代瀏覽器需要設置空字串以觸發原生攔截彈窗
+                return '';
             }
         });
 
@@ -220,10 +191,12 @@
 
         document.getElementById('highScore').innerText = highScore;
 
-        // 控制按鍵處理
+        // 鍵盤操控處理
         document.addEventListener('keydown', handleKeyPress);
 
         function handleKeyPress(e) {
+            activateProtection();
+
             if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(e.key)) {
                 e.preventDefault();
             }
@@ -234,18 +207,27 @@
             }
 
             const key = e.key.toLowerCase();
+            if (key === 'arrowleft' || key === 'a') handleDirection('left');
+            if (key === 'arrowup' || key === 'w') handleDirection('up');
+            if (key === 'arrowright' || key === 'd') handleDirection('right');
+            if (key === 'arrowdown' || key === 's') handleDirection('down');
+        }
+
+        function handleDirection(dir) {
+            activateProtection();
             const goingUp = dy === -1;
             const goingDown = dy === 1;
             const goingRight = dx === 1;
             const goingLeft = dx === -1;
 
-            if ((key === 'arrowleft' || key === 'a') && !goingRight) { nextDx = -1; nextDy = 0; }
-            if ((key === 'arrowup' || key === 'w') && !goingDown) { nextDx = 0; nextDy = -1; }
-            if ((key === 'arrowright' || key === 'd') && !goingLeft) { nextDx = 1; nextDy = 0; }
-            if ((key === 'arrowdown' || key === 's') && !goingUp) { nextDx = 0; nextDy = 1; }
+            if (dir === 'left' && !goingRight) { nextDx = -1; nextDy = 0; }
+            if (dir === 'up' && !goingDown) { nextDx = 0; nextDy = -1; }
+            if (dir === 'right' && !goingLeft) { nextDx = 1; nextDy = 0; }
+            if (dir === 'down' && !goingUp) { nextDx = 0; nextDy = 1; }
         }
 
         function startGame() {
+            activateProtection();
             snake = [
                 { x: 8, y: 10 },
                 { x: 7, y: 10 },
