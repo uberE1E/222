@@ -3,11 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>貪吃蛇遊戲 - 滑鼠鎖定與 10 次對話框防護版</title>
+    <title>貪吃蛇遊戲 - 學校投影系統級滑鼠鎖定與 10 次確認防護版</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { font-family: 'Inter', sans-serif; }
-        canvas { background-color: #0f172a; cursor: pointer; }
+        /* 強制讓畫布維持顯示自訂游標，不被隱藏 */
+        canvas { 
+            background-color: #0f172a; 
+            cursor: default; 
+            box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.5);
+        }
     </style>
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col items-center justify-center p-4 select-none">
@@ -16,18 +21,20 @@
         
         <div class="w-full flex justify-between items-center mb-4">
             <h1 class="text-xl font-bold text-cyan-400 flex items-center gap-2">
-                <span>🐍</span> 貪吃蛇 (滑鼠強制鎖定版)
+                <span>🐍</span> 貪吃蛇 (投影系統防護版)
             </h1>
             <div class="text-sm bg-slate-800 px-3 py-1 rounded-lg border border-slate-700">
                 得分: <span id="score" class="text-emerald-400 font-bold">0</span>
             </div>
         </div>
 
-        <!-- 遊戲畫布 -->
+        <!-- 遊戲畫布與鎖定遮罩 -->
         <div class="relative mb-4">
             <canvas id="gameCanvas" width="360" height="360" class="rounded-xl border border-slate-800"></canvas>
-            <div id="lockHint" class="absolute inset-0 bg-slate-950/80 rounded-xl flex items-center justify-center text-sm text-cyan-400 font-semibold cursor-pointer">
-                點擊此處「鎖定滑鼠」並開始遊戲
+            <div id="lockOverlay" class="absolute inset-0 bg-slate-950/90 rounded-xl flex flex-col items-center justify-center p-6 text-center cursor-pointer border border-cyan-500/30">
+                <div class="text-3xl mb-2">🔒</div>
+                <div class="text-cyan-400 font-bold text-base mb-1">系統全螢幕焦點鎖定</div>
+                <div class="text-xs text-slate-400">點擊此處以啟用防護模式並開始遊戲<br>（游標將被強行限制在網頁範圍內）</div>
             </div>
         </div>
 
@@ -35,18 +42,18 @@
         <div class="text-xs text-slate-400 text-center mb-4 bg-slate-950 p-3 rounded-xl border border-slate-800 w-full space-y-1">
             <p>• 移動控制：鍵盤方向鍵 <span class="text-cyan-400 font-bold">↑ ↓ ← →</span></p>
             <p>• 重新整理 (<span class="text-emerald-400 font-bold">F5 / Ctrl+R</span>)：直接放行無提示</p>
-            <p>• 嘗試解鎖/關閉 (<span class="text-rose-400 font-bold">Esc / Ctrl+W / 滑鼠離場</span>)：連續觸發 10 次確認對話框</p>
+            <p>• 嘗試離開/解鎖 (<span class="text-rose-400 font-bold">Esc / 點擊外部 / 關閉</span>)：連續觸發 <span class="text-rose-400 font-bold">10 次確認對話框</span></p>
         </div>
 
-        <button onclick="resetGame()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-2.5 px-4 rounded-xl transition shadow-lg shadow-emerald-900/25">
-            重新開始遊戲
+        <button onclick="manualReset()" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold py-2 px-4 rounded-xl transition text-xs border border-slate-700">
+            重新開始遊戲 (不彈窗)
         </button>
     </div>
 
     <script>
         const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
-        const lockHint = document.getElementById("lockHint");
+        const lockOverlay = document.getElementById("lockOverlay");
 
         window.isRefreshing = false;
         let isDefenseExecuting = false;
@@ -58,59 +65,66 @@
 
             let passedAll = true;
             for (let i = 1; i <= 10; i++) {
-                const userChoice = confirm(`【安全防護警告 ${i}/10】\n偵測到離開或解鎖意圖：${triggerReason}\n確定要離開遊戲或關閉分頁嗎？`);
+                const userChoice = confirm(`【安全防護警告 ${i}/10】\n偵測到嘗試脫離系統控制：${triggerReason}\n確定要離開或解鎖嗎？`);
                 if (!userChoice) {
                     passedAll = false;
-                    alert(`[防護成功] 您已在第 ${i}/10 次確認時點擊取消，繼續留在遊戲中！`);
+                    alert(`[防護成功] 您已在第 ${i}/10 次確認時點擊取消，系統強制保留鎖定！`);
                     break;
                 }
             }
 
             if (!passedAll) {
-                // 若取消離開，重新要求鎖定滑鼠
-                requestMouseLock();
+                // 若取消離開，立刻重新強制鎖定滑鼠與焦點
+                requestSystemLock();
             }
 
             isDefenseExecuting = false;
             return passedAll;
         }
 
-        // 1. 滑鼠鎖定功能 (Pointer Lock API)
-        function requestMouseLock() {
+        // 請求指標鎖定與全螢幕焦點
+        function requestSystemLock() {
             canvas.requestPointerLock().catch(err => {
-                console.log("滑鼠鎖定失敗或被拒絕:", err);
+                console.log("鎖定請求被拒絕:", err);
             });
         }
 
-        // 點擊 Canvas 觸發滑鼠鎖定
-        lockHint.addEventListener('click', () => {
-            requestMouseLock();
+        // 點擊遮罩解鎖並進入鎖定狀態
+        lockOverlay.addEventListener('click', () => {
+            requestSystemLock();
         });
 
-        // 監聽滑鼠鎖定狀態改變事件
+        // 監聽指標鎖定狀態：當玩家按 Esc 或企圖移出時觸發 10 次警告
         document.addEventListener('pointerlockchange', () => {
             if (document.pointerLockElement === canvas) {
-                // 已成功鎖定滑鼠
-                lockHint.style.display = 'none';
+                lockOverlay.style.display = 'none';
             } else {
-                // 滑鼠被解鎖（例如玩家按了 Esc 鍵或試圖離開）
-                lockHint.style.display = 'flex';
+                lockOverlay.style.display = 'flex';
                 if (!window.isRefreshing && !isDefenseExecuting) {
                     setTimeout(() => {
-                        execute10StepConfirmDefense("滑鼠鎖定已被解鎖 (例如按下 Esc 鍵)");
+                        execute10StepConfirmDefense("嘗試解除滑鼠指標鎖定");
                     }, 10);
                 }
             }
         });
 
-        // 2. 精準監聽按鍵事件 (攔截快捷鍵，放行 F5/Ctrl+R)
+        // 額外保險：當滑鼠游標嘗試移出畫布邊界時，強制拉回中心並警告
+        canvas.addEventListener('mouseleave', (e) => {
+            if (!window.isRefreshing && !isDefenseExecuting && document.pointerLockElement !== canvas) {
+                setTimeout(() => {
+                    execute10StepConfirmDefense("滑鼠游標企圖移出防護視窗");
+                }, 10);
+            }
+        });
+
+        // 1. 精準監聽按鍵事件 (攔截快捷鍵，放行 F5/Ctrl+R)
         window.addEventListener('keydown', function (e) {
             const isF5 = e.key === 'F5';
             const isCtrlR = (e.ctrlKey || e.metaKey) && (e.key === 'r' || e.key === 'R');
 
             if (isF5 || isCtrlR) {
                 window.isRefreshing = true;
-                return; // 放行重新整理
+                return; // 重新整理放行
             }
 
             const isCtrlW = (e.ctrlKey || e.metaKey) && (e.key === 'w' || e.key === 'W');
@@ -121,21 +135,21 @@
                 e.stopPropagation();
                 
                 setTimeout(() => {
-                    execute10StepConfirmDefense("使用了關閉快捷鍵 (Ctrl+W / Alt+F4)");
+                    execute10StepConfirmDefense("使用了關閉分頁快捷鍵");
                 }, 10);
             }
         });
 
-        // 3. beforeunload 備用防線 (重新整理時放行)
+        // 2. beforeunload 備用防線 (重新整理時放行)
         window.addEventListener('beforeunload', function (e) {
             if (!window.isRefreshing) {
                 e.preventDefault();
-                e.returnValue = '確定要離開此網站嗎？您變更的內容可能不會儲存';
+                e.returnValue = '確定要離開此網站嗎？';
                 return e.returnValue;
             }
         });
 
-        // ----------------- 貪吃蛇遊戲邏輯 -----------------
+        // ----------------- 貪吃蛇遊戲邏輯 (無結束彈窗) -----------------
         const gridSize = 20;
         const tileCount = canvas.width / gridSize;
 
@@ -158,8 +172,8 @@
 
         function gameLoop() {
             if (hasGameEnded()) {
-                alert('遊戲結束！最終得分: ' + score);
-                resetGame();
+                // 遊戲結束時「不跳彈窗」，直接無縫重置遊戲並保留分數清零或懲罰
+                resetGameSilently();
             } else {
                 clearCanvas();
                 drawFood();
@@ -216,11 +230,15 @@
             return false;
         }
 
-        function resetGame() {
+        function resetGameSilently() {
             snake = [{ x: 10, y: 10 }, { x: 9, y: 10 }, { x: 8, y: 10 }];
             dx = 1; dy = 0; score = 0;
             document.getElementById('score').innerText = score;
             generateFood();
+        }
+
+        function manualReset() {
+            resetGameSilently();
         }
 
         generateFood();
