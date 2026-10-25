@@ -23,11 +23,7 @@
         }
         ::-webkit-scrollbar-track {
             background: #001100; 
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #00aa00; 
-        }
-        ::-webkit-scrollbar-thumb:hover {
+        }{
             background: #00ff00; 
         }
 
@@ -95,18 +91,7 @@
     <!-- Main Game Interface -->
     <div id="game-ui" class="hidden flex-1 grid grid-cols-1 md:grid-cols-2 w-full h-full relative z-10">
         
-        <!-- Left Panel: The Trap -->
-        <div id="left-panel" class="relative overflow-hidden bg-gray-900 border-r-2 border-green-800 flex items-center justify-center shadow-[inset_0_0_50px_rgba(0,0,0,0.8)]">
-            <div class="absolute top-2 left-2 text-xs text-gray-500 opacity-50">AREA: TARGET_ZONE</div>
-            
-            <button id="time-btn" class="absolute px-6 py-3 bg-red-700 text-white font-bold tracking-widest border border-red-500 shadow-[0_0_15px_#ff0000] rounded-sm transform -translate-x-1/2 -translate-y-1/2" style="top: 50%; left: 50%;">
-                時空穿越
-            </button>
-        </div>
-
-        <!-- Right Panel: Hacking Interface -->
-        <div id="right-panel" class="flex flex-col bg-black p-4 h-full">
-            <div class="flex justify-between items-center mb-2">
+        <!-- Left Panel: The Trap -->b-2">
                 <span class="text-sm text-green-600 cursor-pointer hover:underline" title="點擊可打開選單（若已破解）">>> NEURAL_LINK_TERMINAL v2.0</span>
                 <span class="text-xs text-red-500 animate-pulse">WARNING: ACTIVE AI DEFENSE</span>
             </div>
@@ -152,11 +137,7 @@ const btn = document.getElementById('time-btn');
             <h2 class="text-purple-400 font-bold text-2xl">[ROOT ACCESS] 破解版專屬功能：即時網路與 AI 交流</h2>
             <button id="close-cracked-btn" class="text-red-500 hover:text-red-300 font-bold text-xl">X</button>
         </div>
-        <div class="flex flex-1 gap-4 overflow-hidden">
-            <!-- Multiplayer List -->
-            <div class="w-1/3 border border-purple-800 p-2 flex flex-col bg-gray-950">
-                <h3 class="text-purple-300 mb-2 border-b border-purple-800 pb-1 font-bold">即時線上玩家動態</h3>
-                <div id="player-list" class="flex-1 overflow-y-auto text-sm space-y-2">
+        <div class="flex flex-1 gap-4 overflow-hidden">="flex-1 overflow-y-auto text-sm space-y-2">
                     <!-- Players injected here -->
                 </div>
             </div>
@@ -273,9 +254,7 @@ const btn = document.getElementById('time-btn');
             if (!cheatActive) timeBtn.innerText = translations[currentLang].timeBtnText;
             document.querySelector('#right-panel span.text-green-600').innerText = translations[currentLang].terminalTitle;
             document.querySelector('#right-panel span.text-red-500').innerText = translations[currentLang].warning;
-            execBtn.innerText = translations[currentLang].execCode;
-            submitBugBtn.innerText = translations[currentLang].submitBug;
-        };
+            execBtn.innerText = translations
 
         function log(msg, type = 'info') {
             const p = document.createElement('div');
@@ -323,9 +302,7 @@ const btn = document.getElementById('time-btn');
                 const docSnap = await getDoc(progressRef);
                 if (!docSnap.exists()) {
                     await setDoc(progressRef, { attempts: 0, level: 1, lastLogin: new Date().toISOString() });
-                    log("已在雲端帳號建立新的遊戲進度檔。");
-                } else {
-                    log("已從雲端帳號載入現有遊戲進度。");
+                    log("已在雲端帳號建立新的遊戲進度");
                 }
 
                 const publicPlayerRef = doc(db, 'artifacts', appId, 'public', 'data', 'players', userId);
@@ -336,11 +313,7 @@ const btn = document.getElementById('time-btn');
                 });
 
                 const playersColl = collection(db, 'artifacts', appId, 'public', 'data', 'players');
-                onSnapshot(playersColl, (snapshot) => {
-                    playerList.innerHTML = '';
-                    snapshot.forEach(docSnap => {
-                        const data = docSnap.data();
-                        const p = document.createElement('div');
+                onSnapshot(playersColl, (snalement('div');
                         p.className = "text-purple-300 border-l-2 border-purple-600 pl-2 mb-2 pb-1 border-b border-purple-900";
                         p.innerHTML = `<span class="font-bold">${data.name}</span><br><span class="text-xs text-gray-400">狀態: <span class="text-purple-400">${data.status}</span></span>`;
                         playerList.appendChild(p);
@@ -432,9 +405,6 @@ const btn = document.getElementById('time-btn');
             } catch (err) {
                 log(`執行錯誤: ${err.message}`, "error");
             }
-        };
-
-        submitBugBtn.onclick = async () => {
             const code = codeEditor.value;
             if (!code.trim()) {
                 log("錯誤：程式碼區塊不能為空。", "error");
@@ -481,9 +451,6 @@ const btn = document.getElementById('time-btn');
                 submitBugBtn.innerText = "> 提交漏洞給 AI";
             }
         };
-
-        async function updateAIDefense() {
-            if (cheatActive) return;
             log("警告：AI 敵對防禦系統正在自動生成新的干擾防禦碼...", "warning");
 
             const aiPrompt = `You are an adversarial AI in a hacking game. Your job is to output EXACTLY 1 to 3 lines of JavaScript code to make the HTML element with id 'time-btn' significantly harder to click or find. You can modify its CSS styles (opacity, transform, animation, z-index, filters). Assume 'document.getElementById("time-btn")' is used to get the button. Do NOT remove or delete the button. Do NOT use backticks, quotes, or markdown block formatting. Output ONLY raw executable JavaScript code.`;
@@ -508,20 +475,11 @@ const btn = document.getElementById('time-btn');
                     aiFunc();
                     log("敵對 AI 防禦協議已更新！", "error");
                 }
-            } catch (err) {
-                log(`AI 防禦更新失敗: ${err.message}`);
-            }
         }
 
         let keyBuffer = '';
         window.addEventListener('keydown', (e) => {
             keyBuffer += e.key;
-            if (keyBuffer.length > 10) keyBuffer = keyBuffer.slice(-10);
-            
-            if (keyBuffer.includes('uber-1')) {
-                activateCheat();
-                keyBuffer = '';
-            }
         });
 
         function activateCheat() {
@@ -561,9 +519,7 @@ const btn = document.getElementById('time-btn');
         
         document.querySelector('.text-green-600').onclick = () => {
             if (cheatActive) crackedMenu.classList.remove('hidden');
-        };
-
-        aiChatSend.onclick = async () => {
+        };async () => {
             const query = aiChatInput.value.trim();
             if (!query) return;
             
@@ -589,15 +545,11 @@ const btn = document.getElementById('time-btn');
                     body: JSON.stringify(payload)
                 });
                 const data = await res.json();
-                const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "抱歉，我目前無法回應。";
-                
-                aiMsg.className = "text-purple-300 mb-1";
-                aiMsg.innerText = `> Gemini: ${text}`;
+                const text = d `> Gemini: ${text}`;
             } catch (err) {
                 aiMsg.className = "text-red-500 mb-1";
                 aiMsg.innerText = `> 系統錯誤: 無法與 AI 建立連線。`;
-            }
-            aiChatHistory.scrollTop = aiChatHistory.scrollHeight;
+            }op = aiChatHistory.scrollHeight;
         };
     </script>
 </body>
