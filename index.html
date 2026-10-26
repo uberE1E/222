@@ -6,155 +6,200 @@
     <title>極速 Q-Learning AI 雙頻背景演化競賽模擬器 (5000輛)</title>
     <style>
         * { box-sizing: border-box; }
-        body, html {
+        body {
             margin: 0;
-            padding: 0;
-            width: 100%;
-            height: 100%;
-            background-color: #0d0d0d;
-            color: #fff;
+            background-color: #111;
+            color: #eee;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            overflow: hidden;
-        }
-        #appContainer {
-            display: flex;
-            width: 100vw;
-            height: 100vh;
-            position: relative;
-        }
-        /* 左側與右側面板 */
-        .side-panel {
-            width: 280px;
-            background: rgba(20, 20, 25, 0.95);
-            border-right: 2px solid #333;
             display: flex;
             flex-direction: column;
-            padding: 15px;
-            gap: 12px;
-            z-index: 10;
-            box-shadow: 4px 0 15px rgba(0,0,0,0.5);
-            overflow-y: auto;
-        }
-        .right-panel {
-            border-left: 2px solid #333;
-            border-right: none;
-            width: 300px;
-        }
-        /* 中間全螢幕畫布區 */
-        #canvasWrapper {
-            flex-grow: 1;
-            position: relative;
-            background-color: #151518;
-            display: flex;
-            justify-content: center;
             align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow: hidden;
+            user-select: none;
+        }
+        h1 {
+            margin: 4px 0;
+            font-size: 20px;
+            color: #f1c40f;
+            text-shadow: 0 0 10px rgba(241, 196, 15, 0.4);
+        }
+        #mainContainer {
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+        }
+        #canvasWrapper {
+            position: relative;
         }
         canvas {
-            display: block;
-            background-color: #1a1a22;
-            box-shadow: inset 0 0 50px rgba(0,0,0,0.8);
+            border: 3px solid #333;
+            background-color: #1a1a1a;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.8);
+            border-radius: 8px;
+            cursor: crosshair;
         }
-        h2 { margin: 0 0 5px 0; font-size: 18px; color: #f1c40f; text-shadow: 0 0 8px rgba(241,196,15,0.4); }
-        h3 { margin: 0 0 6px 0; font-size: 14px; color: #3498db; border-bottom: 1px solid #333; padding-bottom: 4px; }
-        .stat-row { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 4px; color: #ccc; }
+        #controlPanel {
+            width: 310px;
+            background: #1e1e1e;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+            max-height: 580px;
+            overflow-y: auto;
+        }
+        .panel-section {
+            background: #252525;
+            padding: 8px 10px;
+            border-radius: 6px;
+            border-left: 4px solid #3498db;
+        }
+        .panel-section.edit-mode { border-left-color: #e67e22; }
+        .panel-section.sim-mode { border-left-color: #2ecc71; }
+        .panel-section h3 {
+            margin: 0 0 6px 0;
+            font-size: 13px;
+            color: #fff;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            margin-bottom: 3px;
+            color: #bbb;
+        }
         .stat-val { font-weight: bold; color: #2ecc71; }
+        .btn-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 5px;
+            margin-top: 4px;
+        }
         button {
-            background-color: #e67e22;
+            background-color: #3498db;
             color: white;
             border: none;
-            padding: 10px;
-            border-radius: 5px;
-            font-size: 13px;
+            padding: 6px 8px;
+            border-radius: 4px;
+            font-size: 11px;
             font-weight: bold;
             cursor: pointer;
             transition: all 0.2s;
-            width: 100%;
         }
-        button:hover { background-color: #d35400; transform: translateY(-1px); }
-        button.secondary { background-color: #34495e; }
-        button.secondary:hover { background-color: #2c3e50; }
-        button.success { background-color: #27ae60; }
-        button.success:hover { background-color: #219653; }
-        button.danger { background-color: #c0392b; }
-        button.danger:hover { background-color: #a93226; }
-        .slider-group { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: #aaa; margin-top: 5px; }
-        input[type="range"] { width: 100%; accent-color: #f1c40f; }
-        .badge {
-            background: #2c3e50;
-            color: #3498db;
-            padding: 4px 8px;
-            border-radius: 4px;
+        button:hover { background-color: #2980b9; transform: translateY(-1px); }
+        button.active { background-color: #e67e22 !important; box-shadow: 0 0 8px rgba(230, 126, 34, 0.6); }
+        button.secondary { background-color: #4a4a4a; }
+        button.secondary:hover { background-color: #5a5a5a; }
+        button.danger { background-color: #e74c3c; }
+        button.danger:hover { background-color: #c0392b; }
+        button.success { background-color: #2ecc71; }
+        button.success:hover { background-color: #27ae60; }
+        .slider-group {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
             font-size: 11px;
-            font-weight: bold;
-            text-align: center;
+            margin-top: 4px;
+            color: #aaa;
         }
-        .instruction-box {
-            font-size: 11px;
+        input[type="range"] { width: 100%; accent-color: #3498db; }
+        .instructions {
+            font-size: 10px;
             color: #888;
-            line-height: 1.4;
-            background: #111;
-            padding: 8px;
+            line-height: 1.3;
+            background: #181818;
+            padding: 6px;
             border-radius: 4px;
-            border: 1px solid #222;
         }
     </style>
 </head>
 <body>
 
-    <div id="appContainer">
-        <!-- 左側控制面板 -->
-        <div class="side-panel">
-            <h2>🏎️ 極速 AI 演化競技場</h2>
-            <div class="badge" id="simModeBadge">狀態: 前台顯示中 (雙模擬器運行)</div>
+    <h1>🏎️ 極速 Q-Learning AI 雙頻背景演化模擬器</h1>
 
-            <div style="display:flex; flex-direction:column; gap:6px; margin-top: 5px;">
-                <button id="pauseBtn" class="success" onclick="togglePause()">⏸️ 暫停演化</button>
-                <button class="secondary" onclick="switchSimulatorView()">🔄 切換背景/前台模擬器</button>
-            </div>
-
-            <div style="margin-top: 10px;">
-                <h3>📊 即時演化數據</h3>
-                <div class="stat-row"><span>世代 (Gen):</span> <span id="genVal" class="stat-val">1</span></div>
-                <div class="stat-row"><span>總 AI 賽車數:</span> <span id="totalCarsVal" class="stat-val">5000</span></div>
-                <div class="stat-row"><span>存活賽車:</span> <span id="aliveVal" class="stat-val">5000</span></div>
-                <div class="stat-row"><span>最高生存秒數:</span> <span id="maxTimeVal" class="stat-val">0.0s</span></div>
-                <div class="stat-row"><span>大腦記憶狀態 (Q):</span> <span id="qStatesVal" class="stat-val">0</span></div>
-            </div>
-
-            <div style="margin-top: 10px;">
-                <h3>⚙️ AI 學習超參數</h3>
-                <div class="slider-group">
-                    <label>學習率 (Alpha): <span id="alphaTxt">0.15</span></label>
-                    <input type="range" id="alphaRange" min="0.05" max="0.6" step="0.05" value="0.15">
-                </div>
-                <div class="slider-group">
-                    <label>探索率 (Epsilon): <span id="epsTxt">0.10</span></label>
-                    <input type="range" id="epsRange" min="0.0" max="0.5" step="0.05" value="0.10">
-                </div>
-            </div>
-
-            <div style="margin-top: auto;">
-                <button class="danger" onclick="resetBrain()">🗑️ 清空 Q-Table 大腦</button>
-            </div>
-        </div>
-
-        <!-- 中間全螢幕畫布 -->
+    <div id="mainContainer">
         <div id="canvasWrapper">
-            <canvas id="simCanvas"></canvas>
+            <canvas id="simCanvas" width="850" height="580"></canvas>
         </div>
 
-        <!-- 右側輔助面板 -->
-        <div class="side-panel right-panel">
-            <h3>🧠 急轉彎優化技術說明</h3>
-            <div class="instruction-box">
-                <strong>1. 5D 多向改良雷達：</strong><br>
-                車頭配置 5 道雷達（左側、左前、正前、右前、右側），特別加強側向偵測，使 AI 在進入急轉彎前能提早預判牆壁。
-                <br><br>
-                <strong>2. 雙模擬器架構：</strong><br>
-                背景運行 5,000 輛 AI 賽車物理與 Q-Learning 更新，前台僅以 60 FPS 進行選擇性插值渲染，徹底解決 LAG 問題。
-                <br><br>
-                <strong>3. 動態轉向與減速懲罰：</strong><br>
-                當雷達偵測到近距離障礙物時，強迫 AI 學習「減速並平滑過彎」，大幅提升急轉彎成功率。
+        <div id="controlPanel">
+            <!-- 雙模擬器與演化控制 -->
+            <div class="panel-section sim-mode">
+                <h3>⚡ 雙模擬器與演化控制</h3>
+                <div class="stat-row">
+                    <span>運作模式:</span>
+                    <button id="simToggleBtn" class="success" style="width: auto; padding: 2px 8px;" onclick="toggleDualSimMode()">雙模擬器 (背景加速)</button>
+                </div>
+                <div class="stat-row">
+                    <span>演化狀態:</span>
+                    <button id="pauseBtn" class="secondary" style="width: auto; padding: 2px 8px;" onclick="togglePause()">暫停演化</button>
+                </div>
+            </div>
+
+            <!-- 賽道編輯工具 -->
+            <div class="panel-section edit-mode">
+                <h3>🛠️ 賽道編輯工具</h3>
+                <div class="btn-group">
+                    <button id="toolWallBtn" class="active" onclick="setEditTool('wall')">🧱 繪製牆壁</button>
+                    <button id="toolStartBtn" onclick="setEditTool('start')">🚩 設定起點</button>
+                    <button id="toolFinishBtn" onclick="setEditTool('finish')">🏁 設定終點</button>
+                    <button id="toolEraseBtn" onclick="setEditTool('erase')">🧹 橡皮擦</button>
+                </div>
+                <div class="btn-group" style="margin-top: 4px;">
+                    <button class="secondary" onclick="clearTrack()">清空賽道</button>
+                    <button class="secondary" onclick="loadPresetTrack()">載入極限彎道</button>
+                </div>
+            </div>
+
+            <!-- AI 數量設定 -->
+            <div class="panel-section">
+                <h3>🚗 車輛與 AI 設定</h3>
+                <div class="slider-group">
+                    <label>AI 賽車數量 (上限5000): <span id="agentCountTxt" class="stat-val">500</span> 輛</label>
+                    <input type="range" id="agentCountRange" min="10" max="5000" step="10" value="500" oninput="updateAgentCount(this.value)">
+                </div>
+            </div>
+
+            <!-- 超參數調整面板 -->
+            <div class="panel-section">
+                <h3>🧠 Q-Learning 超參數</h3>
+                <div class="slider-group">
+                    <label>學習率 (Alpha): <span id="alphaTxt">0.25</span></label>
+                    <input type="range" id="alphaRange" min="0.05" max="0.8" step="0.05" value="0.25">
+                </div>
+                <div class="slider-group">
+                    <label>折扣因子 (Gamma): <span id="gammaTxt">0.9</span></label>
+                    <input type="range" id="gammaRange" min="0.5" max="0.99" step="0.01" value="0.9">
+                </div>
+                <div class="slider-group">
+                    <label>探索率 (Epsilon): <span id="epsTxt">0.15</span></label>
+                    <input type="range" id="epsRange" min="0.0" max="0.8" step="0.05" value="0.15">
+                </div>
+                <div class="btn-group" style="margin-top: 6px;">
+                    <button class="secondary" onclick="saveBrain()">💾 儲存大腦</button>
+                    <button class="danger" onclick="clearBrain()">🗑️ 清空記憶</button>
+                </div>
+            </div>
+
+            <!-- 戰況統計 -->
+            <div class="panel-section">
+                <h3>📊 戰況統計</h3>
+                <div class="stat-row"><span>世代數 (Gen):</span> <span id="genVal" class="stat-val">1</span></div>
+                <div class="stat-row"><span>存活賽車:</span> <span id="aliveVal" class="stat-val">0 / 500</span></div>
+                <div class="stat-row"><span>完成終點數:</span> <span id="winCountVal" class="stat-val">0</span></div>
+                <div class="stat-row"><span>Q-Table 記憶狀態:</span> <span id="qStatesVal" class="stat-val">0</span></div>
+            </div>
+
+            <div class="instructions">
+                <strong>💡 提示：</strong> 5000 輛車時建議開啟「雙模擬器」，背景將全速進行數學運算演化，前台切換渲染時順暢不卡頓！
             </div>
         </div>
     </div>
@@ -163,136 +208,177 @@
         const canvas = document.getElementById("simCanvas");
         const ctx = canvas.getContext("2d");
 
-        // 自動調整全螢幕 Canvas 大小
-        function resizeCanvas() {
-            const wrapper = document.getElementById("canvasWrapper");
-            canvas.width = wrapper.clientWidth;
-            canvas.height = wrapper.clientHeight;
-        }
-        window.addEventListener('resize', resizeCanvas);
-        resizeCanvas();
-
-        // UI 綁定
+        // UI 元素
         const genValEl = document.getElementById("genVal");
-        const totalCarsValEl = document.getElementById("totalCarsVal");
         const aliveValEl = document.getElementById("aliveVal");
-        const maxTimeValEl = document.getElementById("maxTimeVal");
+        const winCountValEl = document.getElementById("winCountVal");
         const qStatesValEl = document.getElementById("qStatesVal");
-        const pauseBtn = document.getElementById("pauseBtn");
-        const simModeBadge = document.getElementById("simModeBadge");
+        const alphaRange = document.getElementById("alphaRange");
+        const gammaRange = document.getElementById("gammaRange");
+        const epsRange = document.getElementById("epsRange");
 
-        let ALPHA = 0.15;
-        let EPSILON = 0.10;
+        // 超參數
+        let ALPHA = parseFloat(alphaRange.value);
+        let GAMMA = parseFloat(gammaRange.value);
+        let EPSILON = parseFloat(epsRange.value);
+        let numAgents = 500;
         let isPaused = false;
-        let activeSimulatorIndex = 0; // 0 或 1，實現雙模擬器切換
+        let isDualSimActive = true; // 雙模擬器模式
 
-        document.getElementById("alphaRange").oninput = (e) => { ALPHA = parseFloat(e.target.value); document.getElementById("alphaTxt").innerText = ALPHA; };
-        document.getElementById("epsRange").oninput = (e) => { EPSILON = parseFloat(e.target.value); document.getElementById("epsTxt").innerText = EPSILON; };
+        alphaRange.oninput = (e) => { ALPHA = parseFloat(e.target.value); document.getElementById("alphaTxt").innerText = ALPHA; };
+        gammaRange.oninput = (e) => { GAMMA = parseFloat(e.target.value); document.getElementById("gammaTxt").innerText = GAMMA; };
+        epsRange.oninput = (e) => { EPSILON = parseFloat(e.target.value); document.getElementById("epsTxt").innerText = EPSILON; };
 
-        function togglePause() {
-            isPaused = !isPaused;
-            pauseBtn.innerText = isPaused ? "▶️ 繼續演化" : "⏸️ 暫停演化";
-            pauseBtn.className = isPaused ? "secondary" : "success";
+        // 賽道資料
+        let editTool = 'wall';
+        let isMouseDown = false;
+        let startPoint = { x: 80, y: 500, angle: -Math.PI / 2 };
+        let finishArea = { x: 700, y: 50, w: 100, h: 100 };
+        let walls = [];
+
+        let generation = 1;
+        let totalWins = 0;
+        let qTable = JSON.parse(localStorage.getItem("q_5000_brain")) || {};
+        let agents = [];
+
+        function saveBrain() {
+            localStorage.setItem("q_5000_brain", JSON.stringify(qTable));
+            alert("💾 AI 大腦已成功儲存至瀏覽器！");
         }
 
-        function switchSimulatorView() {
-            activeSimulatorIndex = 1 - activeSimulatorIndex;
-            simModeBadge.innerText = `狀態: 模擬器 #${activeSimulatorIndex + 1} 顯示中 (雙模交替)`;
-        }
-
-        // Q-Table 大腦記憶
-        let qTable = JSON.parse(localStorage.getItem("q_5000_racing_brain")) || {};
-
-        function resetBrain() {
-            if (confirm("確定要清空 5000 輛車的 Q-Table 大腦嗎？")) {
+        function clearBrain() {
+            if (confirm("⚠️ 確定要清空所有 AI 大腦記憶嗎？")) {
                 qTable = {};
-                localStorage.removeItem("q_5000_racing_brain");
+                localStorage.removeItem("q_5000_brain");
                 generation = 1;
-                initSimulators();
+                totalWins = 0;
+                resetSimulation();
             }
         }
 
-        // 賽道設定 (包含複合彎道與急轉彎測試區)
-        let walls = [];
-        function createComplexTrack() {
+        function togglePause() {
+            isPaused = !isPaused;
+            document.getElementById("pauseBtn").innerText = isPaused ? "恢復演化" : "暫停演化";
+            document.getElementById("pauseBtn").className = isPaused ? "success" : "secondary";
+        }
+
+        function toggleDualSimMode() {
+            isDualSimActive = !isDualSimActive;
+            let btn = document.getElementById("simToggleBtn");
+            btn.innerText = isDualSimActive ? "雙模擬器 (背景加速)" : "單模擬器 (正常模式)";
+            btn.className = isDualSimActive ? "success" : "secondary";
+        }
+
+        function setEditTool(tool) {
+            editTool = tool;
+            document.querySelectorAll('.edit-mode button').forEach(b => b.classList.remove('active'));
+            if (tool === 'wall') document.getElementById('toolWallBtn').classList.add('active');
+            if (tool === 'start') document.getElementById('toolStartBtn').classList.add('active');
+            if (tool === 'finish') document.getElementById('toolFinishBtn').classList.add('active');
+            if (tool === 'erase') document.getElementById('toolEraseBtn').classList.add('active');
+        }
+
+        function loadPresetTrack() {
             walls = [];
-            let w = canvas.width;
-            let h = canvas.height;
+            let w = canvas.width, h = canvas.height;
+            // 外牆
+            addWallBox(20, 20, w - 40, h - 40);
+            // 內置極限彎道與障礙
+            addWallBox(160, 140, w - 320, h - 280);
+            // 額外增加急轉彎障礙物
+            walls.push({ x1: 300, y1: 140, x2: 300, y2: 300 });
+            walls.push({ x1: 550, y1: 280, x2: 550, y2: 440 });
 
-            // 外牆邊界
-            addWall(50, 50, w - 50, 50);
-            addWall(w - 50, 50, w - 50, h - 50);
-            addWall(w - 50, h - 50, 50, h - 50);
-            addWall(50, h - 50, 50, 50);
-
-            // 內島障礙物與急轉彎彎道設計
-            let cx = w / 2, cy = h / 2;
-            addWallBox(cx - 250, cy - 180, 500, 360);
+            startPoint = { x: 90, y: 510, angle: -Math.PI / 2 };
+            finishArea = { x: 700, y: 440, w: 90, h: 90 };
+            resetSimulation();
         }
 
-        function addWall(x1, y1, x2, y2) { walls.push({ x1, y1, x2, y2 }); }
+        function clearTrack() {
+            walls = [];
+            addWallBox(10, 10, canvas.width - 20, canvas.height - 20);
+            resetSimulation();
+        }
+
         function addWallBox(x, y, bw, bh) {
-            addWall(x, y, x + bw, y);
-            addWall(x + bw, y, x + bw, y + bh);
-            addWall(x + bw, y + bh, x, y + bh);
-            addWall(x, y + bh, x, y);
+            walls.push({ x1: x, y1: y, x2: x + bw, y2: y });
+            walls.push({ x1: x + bw, y1: y, x2: x + bw, y2: y + bh });
+            walls.push({ x1: x + bw, y1: y + bh, x2: x, y2: y + bh });
+            walls.push({ x1: x, y1: y + bh, x2: x, y1: y });
         }
-        createComplexTrack();
 
-        // 幾何碰撞輔助
+        let lastMousePos = null;
+        canvas.addEventListener('mousedown', (e) => {
+            isMouseDown = true;
+            let rect = canvas.getBoundingClientRect();
+            let mx = e.clientX - rect.left, my = e.clientY - rect.top;
+            if (editTool === 'start') { startPoint.x = mx; startPoint.y = my; resetSimulation(); }
+            else if (editTool === 'finish') { finishArea.x = mx - 45; finishArea.y = my - 45; }
+            else if (editTool === 'erase') {
+                walls = walls.filter(w => Math.hypot(mx - w.x1, my - w.y1) > 25);
+            }
+            lastMousePos = { x: mx, y: my };
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (!isMouseDown) return;
+            let rect = canvas.getBoundingClientRect();
+            let mx = e.clientX - rect.left, my = e.clientY - rect.top;
+            if (editTool === 'wall' && lastMousePos) {
+                if (Math.hypot(mx - lastMousePos.x, my - lastMousePos.y) > 12) {
+                    walls.push({ x1: lastMousePos.x, y1: lastMousePos.y, x2: mx, y2: my });
+                    lastMousePos = { x: mx, y: my };
+                }
+            } else if (editTool === 'erase') {
+                walls = walls.filter(w => Math.hypot(mx - w.x1, my - w.y1) > 25);
+            }
+        });
+        window.addEventListener('mouseup', () => { isMouseDown = false; lastMousePos = null; });
+
         function getLineIntersection(x1, y1, x2, y2, x3, y3, x4, y4) {
             let denom = (y4 - y3) * (x2 - x1) - (x4 - x3) * (y2 - y1);
             if (denom === 0) return null;
             let ua = ((x4 - x3) * (y1 - y3) - (y4 - y3) * (x1 - x3)) / denom;
             let ub = ((x2 - x1) * (y1 - y3) - (y2 - y1) * (x1 - x3)) / denom;
-            if (ua >= 0 && ua <= 1 && ub >= 0 && ub <= 1) {
-                return { x: x1 + ua * (x2 - x1), y: y1 + ua * (y2 - y1), distFrac: ua };
-            }
+            if (ua >= 0 && ua <= 1 && ub >= 0 && ub <= 1) return { distFrac: ua };
             return null;
         }
 
-        // 賽車類別 (支援 5000 輛極高效能輕量化設計)
+        // 賽車類別 (車體細節完整，採用改良式雷達克服急轉彎)
         class Car {
             constructor() {
+                this.color = `hsl(${Math.random() * 360}, 85%, 60%)`;
                 this.reset();
             }
 
             reset() {
-                this.x = 100 + Math.random() * 40;
-                this.y = canvas.height - 120 + Math.random() * 40;
-                this.angle = -Math.PI / 2;
-                this.speed = 2.0;
-                this.maxSpeed = 5.0;
+                this.x = startPoint.x;
+                this.y = startPoint.y;
+                this.angle = startPoint.angle;
+                this.speed = 0;
+                this.maxSpeed = 4.8;
+                this.radius = 9;
                 this.isAlive = true;
-                this.survivalTime = 0;
-                this.radius = 8;
+                this.hasWon = false;
                 this.lastStateKey = null;
                 this.lastAction = null;
             }
 
-            // 改良式 5 道雷達感測器（特別加強急轉彎側向防護）
+            // 改良式 5 道雷達 (涵蓋更廣角度，提早預判急轉彎)
             getSensors() {
-                let angles = [-Math.PI / 2, -Math.PI / 4, 0, Math.PI / 4, Math.PI / 2];
+                let angles = [-Math.PI/2, -Math.PI/4, 0, Math.PI/4, Math.PI/2];
                 let readings = [];
-                let maxDist = 100;
-
                 for (let a of angles) {
                     let rayAngle = this.angle + a;
-                    let rx2 = this.x + Math.cos(rayAngle) * maxDist;
-                    let ry2 = this.y + Math.sin(rayAngle) * maxDist;
-                    let closest = maxDist;
-
+                    let rx = this.x + Math.cos(rayAngle) * 120;
+                    let ry = this.y + Math.sin(rayAngle) * 120;
+                    let closest = 120;
                     for (let w of walls) {
-                        let hit = getLineIntersection(this.x, this.y, rx2, ry2, w.x1, w.y1, w.x2, w.y2);
-                        if (hit) {
-                            let d = hit.distFrac * maxDist;
-                            if (d < closest) closest = d;
-                        }
+                        let hit = getLineIntersection(this.x, this.y, rx, ry, w.x1, w.y1, w.x2, w.y2);
+                        if (hit && hit.distFrac * 120 < closest) closest = hit.distFrac * 120;
                     }
-
-                    // 離散化為 3 級 (0: 危急近, 1: 中距, 2: 安全)
                     if (closest < 25) readings.push(0);
-                    else if (closest < 55) readings.push(1);
+                    else if (closest < 60) readings.push(1);
                     else readings.push(2);
                 }
                 return readings;
@@ -300,156 +386,159 @@
 
             getStateKey() {
                 let s = this.getSensors();
-                let spd = this.speed > 3.5 ? 1 : 0;
+                let spd = this.speed > 2.5 ? 1 : 0;
                 return `${s[0]}_${s[1]}_${s[2]}_${s[3]}_${s[4]}_${spd}`;
             }
 
             chooseAction(stateKey) {
-                if (!qTable[stateKey]) {
-                    qTable[stateKey] = { 0: 0, 1: 0, 2: 0, 3: 0 }; // 0:左轉, 1:右轉, 2:加速, 3:減速
+                if (!qTable[stateKey]) qTable[stateKey] = { 0: 0, 1: 0, 2: 0, 3: 0 };
+                if (Math.random() < EPSILON) return Math.floor(Math.random() * 4);
+                let actions = qTable[stateKey];
+                let bestA = 0, maxQ = -99999;
+                for (let a = 0; a < 4; a++) {
+                    if (actions[a] > maxQ) { maxQ = actions[a]; bestA = a; }
                 }
-                if (Math.random() < EPSILON) {
-                    return Math.floor(Math.random() * 4);
-                } else {
-                    let acts = qTable[stateKey];
-                    let bestA = 0;
-                    let maxQ = -999999;
-                    for (let a = 0; a < 4; a++) {
-                        if (acts[a] > maxQ) { maxQ = acts[a]; bestA = a; }
-                    }
-                    return bestA;
-                }
+                return bestA;
             }
 
             update() {
-                if (!this.isAlive) return;
+                if (!this.isAlive || this.hasWon) return;
 
-                this.survivalTime += 1 / 60;
                 let stateKey = this.getStateKey();
                 let action = this.chooseAction(stateKey);
 
-                // 動作執行
+                // 動態轉向與車速調整 (急轉彎優化：偵測側邊過近時自動減速切入)
+                let sensors = this.getSensors();
+                if (sensors[0] === 0 || sensors[4] === 0) {
+                    this.speed = Math.max(1.0, this.speed - 0.25); // 遇側牆自動減速過彎
+                }
+
                 if (action === 0) this.angle -= 0.08;
                 else if (action === 1) this.angle += 0.08;
-                else if (action === 2) this.speed = Math.min(this.maxSpeed, this.speed + 0.15);
-                else if (action === 3) this.speed = Math.max(1.0, this.speed - 0.2); // 急轉彎防禦：主動減速
+                else if (action === 2) this.speed = Math.min(this.maxSpeed, this.speed + 0.2);
+                else if (action === 3) this.speed = Math.max(0.8, this.speed - 0.2);
 
                 this.x += Math.cos(this.angle) * this.speed;
                 this.y += Math.sin(this.angle) * this.speed;
 
-                // 碰撞偵測
                 let hitWall = false;
                 for (let w of walls) {
                     let l2 = (w.x2 - w.x1)**2 + (w.y2 - w.y1)**2;
-                    if (l2 === 0) continue;
-                    let t = ((this.x - w.x1)*(w.x2 - w.x1) + (this.y - w.y1)*(w.y2 - w.y1)) / l2;
+                    let t = l2 === 0 ? 0 : ((this.x - w.x1)*(w.x2 - w.x1) + (this.y - w.y1)*(w.y2 - w.y1)) / l2;
                     t = Math.max(0, Math.min(1, t));
                     let d = Math.hypot(this.x - (w.x1 + t*(w.x2 - w.x1)), this.y - (w.y1 + t*(w.y2 - w.y1)));
                     if (d < this.radius) { hitWall = true; break; }
                 }
 
-                let reward = hitWall ? -200 : (1.0 + this.speed * 0.4);
-
-                if (hitWall) {
-                    this.isAlive = false;
+                if (this.x >= finishArea.x && this.x <= finishArea.x + finishArea.w &&
+                    this.y >= finishArea.y && this.y <= finishArea.y + finishArea.h) {
+                    this.hasWon = true;
+                    totalWins++;
                 }
 
-                // Q-Learning 權重更新
-                let nextStateKey = this.getStateKey();
+                if (hitWall) this.isAlive = false;
+
+                let reward = hitWall ? -150 : (this.hasWon ? 400 : 1.2 + this.speed * 0.4);
+                let nextState = this.getStateKey();
+
                 if (this.lastStateKey !== null && this.lastAction !== null) {
                     if (!qTable[this.lastStateKey]) qTable[this.lastStateKey] = { 0: 0, 1: 0, 2: 0, 3: 0 };
-                    if (!qTable[nextStateKey]) qTable[nextStateKey] = { 0: 0, 1: 0, 2: 0, 3: 0 };
-
+                    if (!qTable[nextState]) qTable[nextState] = { 0: 0, 1: 0, 2: 0, 3: 0 };
                     let oldQ = qTable[this.lastStateKey][this.lastAction];
-                    let nextMaxQ = Math.max(...Object.values(qTable[nextStateKey]));
-                    qTable[this.lastStateKey][this.lastAction] = oldQ + ALPHA * (reward + 0.9 * nextMaxQ - oldQ);
+                    let maxNextQ = Math.max(...Object.values(qTable[nextState]));
+                    qTable[this.lastStateKey][this.lastAction] = oldQ + ALPHA * (reward + GAMMA * maxNextQ - oldQ);
                 }
-
                 this.lastStateKey = stateKey;
                 this.lastAction = action;
             }
-        }
 
-        // 雙模擬器架構：Simulator #1 與 Simulator #2 (每個 2500 輛，總計 5000 輛)
-        const TOTAL_CARS = 5000;
-        const CARS_PER_SIM = 2500;
-        let simulators = [[], []];
-        let generation = 1;
-        let maxSurvivalTime = 0;
-
-        function initSimulators() {
-            simulators = [[], []];
-            for (let i = 0; i < 2; i++) {
-                for (let c = 0; c < CARS_PER_SIM; c++) {
-                    simulators[i].push(new Car());
-                }
+            draw() {
+                if (!this.isAlive) return;
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.angle);
+                // 精緻車身細節
+                ctx.fillStyle = this.color;
+                ctx.fillRect(-12, -7, 24, 14);
+                ctx.fillStyle = '#111';
+                ctx.fillRect(0, -5, 5, 10); // 擋風玻璃
+                ctx.fillStyle = '#fff';
+                ctx.fillRect(10, -6, 3, 3); // 車燈
+                ctx.fillRect(10, 3, 3, 3);
+                ctx.restore();
             }
         }
-        initSimulators();
 
-        // 主演化與渲染循環
-        function gameLoop() {
-            if (!isPaused) {
-                // 雙模擬器運行：一個在背景運算，另一個在前台運算並渲染
-                for (let sIdx = 0; sIdx < 2; sIdx++) {
-                    let aliveCount = 0;
-                    for (let car of simulators[sIdx]) {
-                        if (car.isAlive) {
-                            car.update();
-                            aliveCount++;
-                            if (car.survivalTime > maxSurvivalTime) maxSurvivalTime = car.survivalTime;
-                        }
-                    }
-
-                    // 如果該模擬器車輛全部陣亡，自動重置該模擬器世代
-                    if (aliveCount === 0) {
-                        generation++;
-                        for (let car of simulators[sIdx]) car.reset();
-                    }
-                }
-            }
-
-            // 渲染前台選定的模擬器畫面
-            renderActiveSimulator();
-
-            // 定期自動存檔大腦到 localStorage (每 10 秒)
-            requestAnimationFrame(gameLoop);
+        function updateAgentCount(val) {
+            numAgents = parseInt(val);
+            document.getElementById("agentCountTxt").innerText = numAgents;
+            resetSimulation();
         }
 
-        function renderActiveSimulator() {
+        function resetSimulation() {
+            agents = [];
+            for (let i = 0; i < numAgents; i++) agents.push(new Car());
+        }
+
+        loadPresetTrack();
+
+        function renderScene() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // 繪製賽道牆壁
-            ctx.strokeStyle = "#e74c3c";
-            ctx.lineWidth = 4;
+            // 終點與起點
+            ctx.fillStyle = "#27ae60";
+            ctx.fillRect(finishArea.x, finishArea.y, finishArea.w, finishArea.h);
+            ctx.fillStyle = "#fff"; ctx.font = "bold 13px sans-serif";
+            ctx.fillText("🏁 終點", finishArea.x + 25, finishArea.y + 55);
+
+            ctx.fillStyle = "rgba(52, 152, 219, 0.4)";
+            ctx.beginPath(); ctx.arc(startPoint.x, startPoint.y, 18, 0, Math.PI*2); ctx.fill();
+
+            // 牆壁
+            ctx.strokeStyle = "#e74c3c"; ctx.lineWidth = 5; ctx.lineCap = "round";
             for (let w of walls) {
-                ctx.beginPath();
-                ctx.moveTo(w.x1, w.y1);
-                ctx.lineTo(w.x2, w.y2);
-                ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(w.x1, w.y1); ctx.lineTo(w.x2, w.y2); ctx.stroke();
             }
 
-            // 繪製當前前台模擬器的賽車
-            let currentCars = simulators[activeSimulatorIndex];
+            // 渲染賽車 (支援高達 5,000 輛高效繪製)
             let aliveCount = 0;
-
-            ctx.fillStyle = "#3498db";
-            for (let car of currentCars) {
-                if (car.isAlive) {
+            for (let agent of agents) {
+                if (agent.isAlive && !agent.hasWon) {
                     aliveCount++;
-                    ctx.fillRect(car.x - 3, car.y - 3, 6, 6);
+                    agent.draw();
                 }
             }
 
-            // 更新 UI 數據
             genValEl.innerText = generation;
-            totalCarsValEl.innerText = TOTAL_CARS;
-            aliveValEl.innerText = `${aliveCount + simulators[1 - activeSimulatorIndex].filter(c => c.isAlive).length} / ${TOTAL_CARS}`;
-            maxTimeValEl.innerText = `${maxSurvivalTime.toFixed(1)}s`;
+            aliveValEl.innerText = `${aliveCount} / ${numAgents}`;
+            winCountValEl.innerText = totalWins;
             qStatesValEl.innerText = Object.keys(qTable).length;
         }
 
-        // 啟動主迴圈
+        // 主迴圈與雙模擬器背景加速機制
+        function gameLoop() {
+            if (!isPaused) {
+                // 如果開啟雙模擬器，背景每幀額外多跑 3 次迭代以加速演化
+                let iterations = isDualSimActive ? 4 : 1;
+                for (let it = 0; it < iterations; it++) {
+                    let aliveCount = 0;
+                    for (let agent of agents) {
+                        if (agent.isAlive && !agent.hasWon) {
+                            agent.update();
+                            aliveCount++;
+                        }
+                    }
+                    if (aliveCount === 0) {
+                        generation++;
+                        resetSimulation();
+                        break;
+                    }
+                }
+            }
+            renderScene();
+            requestAnimationFrame(gameLoop);
+        }
+
         requestAnimationFrame(gameLoop);
     </script>
 </body>
