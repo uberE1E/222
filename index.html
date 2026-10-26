@@ -3,256 +3,137 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Trackmania 賽車 AI 強化學習與演化模擬器 (仿影片效果)</title>
+    <title>OpenAI Hide & Seek 多代理人躲迷藏模擬器</title>
     <style>
         * { box-sizing: border-box; }
         body {
             margin: 0;
-            background-color: #0b0f19;
-            color: #f0f4f8;
+            background-color: #0d1117;
+            color: #c9d1d9;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             min-height: 100vh;
-            overflow-x: hidden;
+            overflow: hidden;
             user-select: none;
-            padding: 10px 0;
         }
         h1 {
             margin: 4px 0;
             font-size: 22px;
-            color: #38bdf8;
-            text-shadow: 0 0 12px rgba(56, 189, 248, 0.4);
+            color: #58a6ff;
+            text-shadow: 0 0 10px rgba(88, 166, 255, 0.4);
         }
         .subtitle {
             font-size: 11px;
-            color: #94a3b8;
+            color: #8b949e;
             margin-bottom: 8px;
         }
         #mainContainer {
             display: flex;
-            gap: 12px;
+            gap: 15px;
             align-items: flex-start;
         }
-        #leftPanel {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-        #canvasWrapper { position: relative; }
         canvas {
-            border: 3px solid #1e293b;
-            background-color: #0f172a;
+            border: 3px solid #30363d;
+            background-color: #161b22;
             box-shadow: 0 10px 30px rgba(0,0,0,0.8);
             border-radius: 8px;
-            cursor: crosshair;
-        }
-        #chartBox {
-            background: #1e293b;
-            border: 1px solid #334155;
-            border-radius: 8px;
-            padding: 8px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-        #chartBox h3 {
-            margin: 0 0 4px 0;
-            font-size: 12px;
-            color: #38bdf8;
-        }
-        #statsCanvas {
-            background: #0f172a;
-            border-radius: 4px;
         }
         #controlPanel {
-            width: 310px;
-            background: #1e293b;
-            border: 1px solid #334155;
+            width: 280px;
+            background: #21262d;
+            border: 1px solid #30363d;
             border-radius: 8px;
             padding: 12px;
             display: flex;
             flex-direction: column;
             gap: 10px;
             box-shadow: 0 4px 20px rgba(0,0,0,0.5);
-            max-height: 720px;
-            overflow-y: auto;
         }
         .panel-section {
-            background: #0f172a;
+            background: #161b22;
             padding: 8px 10px;
             border-radius: 6px;
-            border-left: 4px solid #38bdf8;
+            border-left: 4px solid #58a6ff;
         }
-        .panel-section.edit-mode { border-left-color: #f59e0b; }
-        .panel-section.sim-mode { border-left-color: #10b981; }
-        .panel-section.reward-mode { border-left-color: #a855f7; }
+        .panel-section.seeker { border-left-color: #f85149; }
+        .panel-section.hider { border-left-color: #3fb950; }
         .panel-section h3 {
             margin: 0 0 6px 0;
             font-size: 13px;
             color: #fff;
             display: flex;
             justify-content: space-between;
-            align-items: center;
         }
         .stat-row {
             display: flex;
             justify-content: space-between;
             font-size: 11px;
             margin-bottom: 3px;
-            color: #cbd5e1;
+            color: #8b949e;
         }
-        .stat-val { font-weight: bold; color: #10b981; }
-        .btn-group {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 5px;
-            margin-top: 4px;
-        }
+        .stat-val { font-weight: bold; color: #58a6ff; }
         button {
-            background-color: #0284c7;
+            background-color: #238636;
             color: white;
             border: none;
-            padding: 6px 8px;
+            padding: 6px 10px;
             border-radius: 4px;
             font-size: 11px;
             font-weight: bold;
             cursor: pointer;
             transition: all 0.2s;
-        }
-        button:hover { background-color: #0369a1; transform: translateY(-1px); }
-        button.active { background-color: #f59e0b !important; box-shadow: 0 0 8px rgba(245, 158, 11, 0.6); }
-        button.secondary { background-color: #475569; }
-        button.secondary:hover { background-color: #64748b; }
-        button.danger { background-color: #ef4444; }
-        button.danger:hover { background-color: #dc2626; }
-        button.success { background-color: #10b981; }
-        button.success:hover { background-color: #059669; }
-        .slider-group {
-            display: flex;
-            flex-direction: column;
-            gap: 2px;
-            font-size: 11px;
+            width: 100%;
             margin-top: 4px;
-            color: #94a3b8;
         }
-        input[type="range"] { width: 100%; accent-color: #38bdf8; }
+        button:hover { background-color: #2ea043; }
+        button.secondary { background-color: #30363d; }
+        button.secondary:hover { background-color: #484f58; }
         .instructions {
             font-size: 10px;
-            color: #94a3b8;
+            color: #8b949e;
             line-height: 1.3;
-            background: #0f172a;
+            background: #161b22;
             padding: 6px;
             border-radius: 4px;
-        }
-        #toastMsg {
-            font-size: 11px;
-            color: #facc15;
-            text-align: center;
-            min-height: 15px;
         }
     </style>
 </head>
 <body>
 
-    <h1>🏎️ Trackmania AI 強化學習賽車模擬器</h1>
-    <div class="subtitle">致敬 Yosh 頻道《Training an unbeatable AI in Trackmania》之強化學習重現專案</div>
+    <h1>🕵️‍♂️ Multi-Agent Hide & Seek 模擬器</h1>
+    <div class="subtitle">致敬 OpenAI 經典多代理人對抗與工具利用研究</div>
 
     <div id="mainContainer">
-        <div id="leftPanel">
-            <div id="canvasWrapper">
-                <canvas id="simCanvas" width="850" height="460"></canvas>
-            </div>
-            <!-- 每輪訓練表現柱狀圖 -->
-            <div id="chartBox">
-                <h3>📊 強化學習每輪表現 (藍色: 平均得分 | 綠色: 最高得分)</h3>
-                <canvas id="statsCanvas" width="850" height="130"></canvas>
-            </div>
-        </div>
+        <canvas id="simCanvas" width="800" height="520"></canvas>
 
         <div id="controlPanel">
-            <!-- 訓練與演化控制 -->
-            <div class="panel-section sim-mode">
-                <h3>⚡ 訓練與演化加速</h3>
-                <div class="stat-row">
-                    <span>背景高速運算:</span>
-                    <button id="simToggleBtn" class="success" style="width: auto; padding: 2px 8px;" onclick="toggleDualSimMode()">開啟加速</button>
-                </div>
-                <div class="stat-row">
-                    <span>演化狀態:</span>
-                    <button id="pauseBtn" class="secondary" style="width: auto; padding: 2px 8px;" onclick="togglePause()">暫停訓練</button>
-                </div>
+            <div class="panel-section hider">
+                <h3>🟢 躲藏者 (Hiders)</h3>
+                <div class="stat-row"><span>目標:</span> <span>推動箱子建造防禦堡壘</span></div>
+                <div class="stat-row"><span>存活狀態:</span> <span id="hiderStatus" class="stat-val">防守中</span></div>
             </div>
 
-            <!-- 賽道編輯工具 -->
-            <div class="panel-section edit-mode">
-                <h3>🛠️ 賽道自訂工具 (Trackmania)</h3>
-                <div class="btn-group">
-                    <button id="toolWallBtn" class="active" onclick="setEditTool('wall')">🧱 繪製賽道牆</button>
-                    <button id="toolStartBtn" onclick="setEditTool('start')">🚩 設定起點</button>
-                    <button id="toolFinishBtn" onclick="setEditTool('finish')">🏁 設定終點</button>
-                    <button id="toolEraseBtn" onclick="setEditTool('erase')">🧹 橡皮擦</button>
-                </div>
-                <div class="btn-group" style="margin-top: 4px;">
-                    <button class="secondary" onclick="clearTrack()">清空賽道</button>
-                    <button class="secondary" onclick="loadPresetTrack()">載入經典彎道</button>
-                </div>
+            <div class="panel-section seeker">
+                <h3>🔴 尋找者 (Seekers)</h3>
+                <div class="stat-row"><span>目標:</span> <span>突破障礙尋找躲藏者</span></div>
+                <div class="stat-row"><span>狀態:</span> <span id="seekerStatus" class="stat-val">追擊中</span></div>
             </div>
 
-            <!-- 獎勵機制設定 (對應影片中的 Reward Shaping) -->
-            <div class="panel-section reward-mode">
-                <h3>🎯 強化學習獎勵 (Reward Shaping)</h3>
-                <div class="slider-group">
-                    <label>抵達終點獎勵: <span id="rewWinTxt" class="stat-val">600</span></label>
-                    <input type="range" id="rewWinRange" min="200" max="1200" step="50" value="600">
-                </div>
-                <div class="slider-group">
-                    <label>撞牆懲罰: <span id="rewCrashTxt" class="stat-val">-150</span></label>
-                    <input type="range" id="rewCrashRange" min="-400" max="-50" step="25" value="-150">
-                </div>
-                <div class="slider-group">
-                    <label>向前進度加權: <span id="rewDistTxt" class="stat-val">1.2</span></label>
-                    <input type="range" id="rewDistRange" min="0.2" max="3.0" step="0.2" value="1.2">
-                </div>
-            </div>
-
-            <!-- 車輛數量設定 -->
             <div class="panel-section">
-                <h3>🚗 同時訓練車輛數</h3>
-                <div class="slider-group">
-                    <label>AI 賽車數量 (5台為1組): <span id="agentCountTxt" class="stat-val">100</span> 輛</label>
-                    <input type="range" id="agentCountRange" min="5" max="1000" step="5" value="100" oninput="updateAgentCount(this.value)">
-                </div>
+                <h3>⚙️ 模擬控制</h3>
+                <div class="stat-row"><span>回合時間:</span> <span id="timeVal" class="stat-val">0.0s</span></div>
+                <div class="stat-row"><span>當前回合數:</span> <span id="roundVal" class="stat-val">1</span></div>
+                <button onclick="resetRound()">🔄 重新開始本回合</button>
+                <button class="secondary" onclick="resetAll()">🗑️ 重設所有統計</button>
             </div>
 
-            <!-- Q-Learning 超參數 -->
-            <div class="panel-section">
-                <h3>🧠 AI 學習超參數 (Q-Learning)</h3>
-                <div class="slider-group">
-                    <label>學習率 (Alpha): <span id="alphaTxt">0.25</span></label>
-                    <input type="range" id="alphaRange" min="0.05" max="0.8" step="0.05" value="0.25">
-                </div>
-                <div class="slider-group">
-                    <label>探索率 (Epsilon): <span id="epsTxt">0.15</span></label>
-                    <input type="range" id="epsRange" min="0.0" max="0.8" step="0.05" value="0.15">
-                </div>
-                <div class="btn-group" style="margin-top: 6px;">
-                    <button class="secondary" onclick="saveBrain(true)">💾 儲存 AI 大腦</button>
-                    <button class="danger" onclick="clearBrain()">🗑️ 重設大腦</button>
-                </div>
-                <div id="toastMsg"></div>
-            </div>
-
-            <!-- 數據統計 -->
-            <div class="panel-section">
-                <h3>📊 訓練成果統計</h3>
-                <div class="stat-row"><span>總完成輪數 (Episodes):</span> <span id="episodesVal" class="stat-val">0</span></div>
-                <div class="stat-row"><span>場上存活車輛:</span> <span id="aliveVal" class="stat-val">0 / 100</span></div>
-                <div class="stat-row"><span>歷史最高得分:</span> <span id="topScoreVal" class="stat-val">0</span></div>
-                <div class="stat-row"><span>大腦記憶狀態數:</span> <span id="qStatesVal" class="stat-val">0</span></div>
+            <div class="instructions">
+                <strong>💡 遊戲規則：</strong><br>
+                • 遊戲開始有短暫準備期，躲藏者（綠點）會合力將箱子（方塊）推到中央圍成掩體。<br>
+                • 尋找者（紅點）解凍後會試圖推開箱子或繞過去抓人！
             </div>
         </div>
     </div>
@@ -260,412 +141,215 @@
     <script>
         const canvas = document.getElementById("simCanvas");
         const ctx = canvas.getContext("2d");
-        const statsCanvas = document.getElementById("statsCanvas");
-        const statsCtx = statsCanvas.getContext("2d");
 
-        const episodesValEl = document.getElementById("episodesVal");
-        const aliveValEl = document.getElementById("aliveVal");
-        const topScoreValEl = document.getElementById("topScoreVal");
-        const qStatesValEl = document.getElementById("qStatesVal");
-        const toastMsg = document.getElementById("toastMsg");
+        // UI 元素
+        const timeValEl = document.getElementById("timeVal");
+        const roundValEl = document.getElementById("roundVal");
+        const hiderStatusEl = document.getElementById("hiderStatus");
+        const seekerStatusEl = document.getElementById("seekerStatus");
 
-        const alphaRange = document.getElementById("alphaRange");
-        const epsRange = document.getElementById("epsRange");
-        const rewWinRange = document.getElementById("rewWinRange");
-        const rewCrashRange = document.getElementById("rewCrashRange");
-        const rewDistRange = document.getElementById("rewDistRange");
+        let round = 1;
+        let roundTime = 0;
+        let gamePhase = "PREPARE"; // PREPARE (準備期), SEEK (尋找期)
+        let phaseTimer = 4.0; // 4秒準備期
 
-        let ALPHA = parseFloat(alphaRange.value);
-        let EPSILON = parseFloat(epsRange.value);
-        let REW_WIN = parseFloat(rewWinRange.value);
-        let REW_CRASH = parseFloat(rewCrashRange.value);
-        let REW_DIST = parseFloat(rewDistRange.value);
+        //  агенты (Agents)
+        let hiders = [];
+        let seekers = [];
+        let boxes = [];
 
-        let numAgents = 100;
-        let isPaused = false;
-        let isFastMode = true;
-
-        alphaRange.oninput = (e) => { ALPHA = parseFloat(e.target.value); document.getElementById("alphaTxt").innerText = ALPHA; };
-        epsRange.oninput = (e) => { EPSILON = parseFloat(e.target.value); document.getElementById("epsTxt").innerText = EPSILON; };
-        rewWinRange.oninput = (e) => { REW_WIN = parseFloat(e.target.value); document.getElementById("rewWinTxt").innerText = REW_WIN; };
-        rewCrashRange.oninput = (e) => { REW_CRASH = parseFloat(e.target.value); document.getElementById("rewCrashTxt").innerText = REW_CRASH; };
-        rewDistRange.oninput = (e) => { REW_DIST = parseFloat(e.target.value); document.getElementById("rewDistTxt").innerText = REW_DIST; };
-
-        // 賽道與地圖資料
-        let editTool = 'wall';
-        let isMouseDown = false;
-        let startPoint = { x: 80, y: 380, angle: -Math.PI / 2 };
-        let finishArea = { x: 720, y: 40, w: 90, h: 90 };
-        let walls = [];
-
-        let totalEpisodes = 0;
-        let globalMaxScore = -9999;
-        
-        // 共享 Q-Table 大腦
-        let qTable = JSON.parse(localStorage.getItem("trackmania_ai_brain")) || {};
-        let groups = [];
-        let episodeHistory = [];
-
-        function showToast(msg) {
-            toastMsg.innerText = msg;
-            setTimeout(() => { toastMsg.innerText = ""; }, 3000);
-        }
-
-        function saveBrain(manual = false) {
-            localStorage.setItem("trackmania_ai_brain", JSON.stringify(qTable));
-            if (manual) showToast("💾 AI 大腦已成功儲存！");
-        }
-
-        function clearBrain() {
-            qTable = {};
-            localStorage.removeItem("trackmania_ai_brain");
-            totalEpisodes = 0;
-            globalMaxScore = -9999;
-            episodeHistory = [];
-            resetSimulation();
-            showToast("🗑️ AI 大腦已重設！");
-        }
-
-        function togglePause() {
-            isPaused = !isPaused;
-            document.getElementById("pauseBtn").innerText = isPaused ? "恢復訓練" : "暫停訓練";
-            document.getElementById("pauseBtn").className = isPaused ? "success" : "secondary";
-        }
-
-        function toggleDualSimMode() {
-            isFastMode = !isFastMode;
-            let btn = document.getElementById("simToggleBtn");
-            btn.innerText = isFastMode ? "開啟加速" : "正常速度";
-            btn.className = isFastMode ? "success" : "secondary";
-        }
-
-        function setEditTool(tool) {
-            editTool = tool;
-            document.querySelectorAll('.edit-mode button').forEach(b => b.classList.remove('active'));
-            if (tool === 'wall') document.getElementById('toolWallBtn').classList.add('active');
-            if (tool === 'start') document.getElementById('toolStartBtn').classList.add('active');
-            if (tool === 'finish') document.getElementById('toolFinishBtn').classList.add('active');
-            if (tool === 'erase') document.getElementById('toolEraseBtn').classList.add('active');
-        }
-
-        function loadPresetTrack() {
-            walls = [];
-            let w = canvas.width, h = canvas.height;
-            addWallBox(20, 20, w - 40, h - 40);
-            addWallBox(160, 120, w - 320, h - 240);
-            walls.push({ x1: 300, y1: 120, x2: 300, y2: 260 });
-            walls.push({ x1: 550, y1: 220, x2: 550, y2: 360 });
-
-            startPoint = { x: 90, y: 390, angle: -Math.PI / 2 };
-            finishArea = { x: 720, y: 340, w: 90, h: 90 };
-            resetSimulation();
-        }
-
-        function clearTrack() {
-            walls = [];
-            addWallBox(10, 10, canvas.width - 20, canvas.height - 20);
-            resetSimulation();
-        }
-
-        function addWallBox(x, y, bw, bh) {
-            walls.push({ x1: x, y1: y, x2: x + bw, y2: y });
-            walls.push({ x1: x + bw, y1: y, x2: x + bw, y2: y + bh });
-            walls.push({ x1: x + bw, y1: y + bh, x2: x, y2: y + bh });
-            walls.push({ x1: x, y1: y + bh, x2: x, y1: y });
-        }
-
-        let lastMousePos = null;
-        canvas.addEventListener('mousedown', (e) => {
-            isMouseDown = true;
-            let rect = canvas.getBoundingClientRect();
-            let mx = e.clientX - rect.left, my = e.clientY - rect.top;
-            if (editTool === 'start') { startPoint.x = mx; startPoint.y = my; resetSimulation(); }
-            else if (editTool === 'finish') { finishArea.x = mx - 45; finishArea.y = my - 45; }
-            else if (editTool === 'erase') {
-                walls = walls.filter(w => Math.hypot(mx - w.x1, my - w.y1) > 25);
-            }
-            lastMousePos = { x: mx, y: my };
-        });
-
-        canvas.addEventListener('mousemove', (e) => {
-            if (!isMouseDown) return;
-            let rect = canvas.getBoundingClientRect();
-            let mx = e.clientX - rect.left, my = e.clientY - rect.top;
-            if (editTool === 'wall' && lastMousePos) {
-                if (Math.hypot(mx - lastMousePos.x, my - lastMousePos.y) > 12) {
-                    walls.push({ x1: lastMousePos.x, y1: lastMousePos.y, x2: mx, y2: my });
-                    lastMousePos = { x: mx, y: my };
-                }
-            } else if (editTool === 'erase') {
-                walls = walls.filter(w => Math.hypot(mx - w.x1, my - w.y1) > 25);
-            }
-        });
-        window.addEventListener('mouseup', () => { isMouseDown = false; lastMousePos = null; });
-
-        function getLineIntersection(x1, y1, x2, y2, x3, y3, x4, y4) {
-            let denom = (y4 - y3) * (x2 - x1) - (x4 - x3) * (y2 - y1);
-            if (denom === 0) return null;
-            let ua = ((x4 - x3) * (y1 - y3) - (y4 - y3) * (x1 - x3)) / denom;
-            let ub = ((x2 - x1) * (y1 - y3) - (y2 - y1) * (x1 - x3)) / denom;
-            if (ua >= 0 && ua <= 1 && ub >= 0 && ub <= 1) return { distFrac: ua };
-            return null;
-        }
-
-        class Car {
-            constructor() {
-                this.color = `hsl(${Math.random() * 360}, 85%, 60%)`;
-                this.reset();
-            }
-
-            reset() {
-                this.x = startPoint.x;
-                this.y = startPoint.y;
-                this.angle = startPoint.angle;
-                this.speed = 0;
-                this.maxSpeed = 4.8;
-                this.radius = 9;
-                this.isAlive = true;
-                this.hasWon = false;
-                this.totalScore = 0;
-                this.lastStateKey = null;
-                this.lastAction = null;
-            }
-
-            getSensors() {
-                let angles = [-Math.PI/2, -Math.PI/4, 0, Math.PI/4, Math.PI/2];
-                let readings = [];
-                for (let a of angles) {
-                    let rayAngle = this.angle + a;
-                    let rx = this.x + Math.cos(rayAngle) * 120;
-                    let ry = this.y + Math.sin(rayAngle) * 120;
-                    let closest = 120;
-                    for (let w of walls) {
-                        let hit = getLineIntersection(this.x, this.y, rx, ry, w.x1, w.y1, w.x2, w.y2);
-                        if (hit && hit.distFrac * 120 < closest) closest = hit.distFrac * 120;
-                    }
-                    if (closest < 25) readings.push(0);
-                    else if (closest < 60) readings.push(1);
-                    else readings.push(2);
-                }
-                return readings;
-            }
-
-            getStateKey() {
-                let s = this.getSensors();
-                let spd = this.speed > 2.5 ? 1 : 0;
-                return `${s[0]}_${s[1]}_${s[2]}_${s[3]}_${s[4]}_${spd}`;
-            }
-
-            chooseAction(stateKey) {
-                if (!qTable[stateKey]) qTable[stateKey] = { 0: 0, 1: 0, 2: 0, 3: 0 };
-                if (Math.random() < EPSILON) return Math.floor(Math.random() * 4);
-                let actions = qTable[stateKey];
-                let bestA = 0, maxQ = -99999;
-                for (let a = 0; a < 4; a++) {
-                    if (actions[a] > maxQ) { maxQ = actions[a]; bestA = a; }
-                }
-                return bestA;
+        class Agent {
+            constructor(x, y, type) {
+                this.x = x;
+                this.y = y;
+                this.vx = 0;
+                this.vy = 0;
+                this.radius = 12;
+                this.type = type; // 'hider' 或 'seeker'
+                this.speed = type === 'hider' ? 2.2 : 2.5;
             }
 
             update() {
-                if (!this.isAlive || this.hasWon) return;
+                if (gamePhase === "PREPARE" && this.type === 'seeker') return; // 尋找者初期冷凍
 
-                let stateKey = this.getStateKey();
-                let action = this.chooseAction(stateKey);
-
-                let sensors = this.getSensors();
-                if (sensors[0] === 0 || sensors[4] === 0) {
-                    this.speed = Math.max(1.0, this.speed - 0.25);
-                }
-
-                if (action === 0) this.angle -= 0.08;
-                else if (action === 1) this.angle += 0.08;
-                else if (action === 2) this.speed = Math.min(this.maxSpeed, this.speed + 0.2);
-                else if (action === 3) this.speed = Math.max(0.8, this.speed - 0.2);
-
-                this.x += Math.cos(this.angle) * this.speed;
-                this.y += Math.sin(this.angle) * this.speed;
-
-                let hitWall = false;
-                for (let w of walls) {
-                    let l2 = (w.x2 - w.x1)**2 + (w.y2 - w.y1)**2;
-                    let t = l2 === 0 ? 0 : ((this.x - w.x1)*(w.x2 - w.x1) + (this.y - w.y1)*(w.y2 - w.y1)) / l2;
-                    t = Math.max(0, Math.min(1, t));
-                    let d = Math.hypot(this.x - (w.x1 + t*(w.x2 - w.x1)), this.y - (w.y1 + t*(w.y2 - w.y1)));
-                    if (d < this.radius) { hitWall = true; break; }
-                }
-
-                if (this.x >= finishArea.x && this.x <= finishArea.x + finishArea.w &&
-                    this.y >= finishArea.y && this.y <= finishArea.y + finishArea.h) {
-                    this.hasWon = true;
-                }
-
-                if (hitWall) this.isAlive = false;
-
-                let distToFinish = Math.hypot(this.x - (finishArea.x + finishArea.w/2), this.y - (finishArea.y + finishArea.h/2));
-                let pathReward = (800 - distToFinish) * 0.05 * REW_DIST;
-                let reward = hitWall ? REW_CRASH : (this.hasWon ? REW_WIN : pathReward + this.speed * 0.5);
-                this.totalScore += reward;
-
-                let nextState = this.getStateKey();
-                if (this.lastStateKey !== null && this.lastAction !== null) {
-                    if (!qTable[this.lastStateKey]) qTable[this.lastStateKey] = { 0: 0, 1: 0, 2: 0, 3: 0 };
-                    if (!qTable[nextState]) qTable[nextState] = { 0: 0, 1: 0, 2: 0, 3: 0 };
-                    let oldQ = qTable[this.lastStateKey][this.lastAction];
-                    let maxNextQ = Math.max(...Object.values(qTable[nextState]));
-                    
-                    qTable[this.lastStateKey][this.lastAction] = oldQ + ALPHA * (reward + 0.9 * maxNextQ - oldQ);
-                }
-                this.lastStateKey = stateKey;
-                this.lastAction = action;
-            }
-
-            draw() {
-                if (!this.isAlive) return;
-                ctx.save();
-                ctx.translate(this.x, this.y);
-                ctx.rotate(this.angle);
-                ctx.fillStyle = this.color;
-                ctx.fillRect(-12, -7, 24, 14);
-                ctx.fillStyle = '#0f172a';
-                ctx.fillRect(0, -5, 5, 10);
-                ctx.fillStyle = '#fff';
-                ctx.fillRect(10, -6, 3, 3);
-                ctx.fillRect(10, 3, 3, 3);
-                ctx.restore();
-            }
-        }
-
-        class CarGroup {
-            constructor() {
-                this.cars = [new Car(), new Car(), new Car(), new Car(), new Car()];
-            }
-
-            update() {
-                let aliveInGroup = 0;
-                for (let car of this.cars) {
-                    if (car.isAlive && !car.hasWon) {
-                        car.update();
-                        aliveInGroup++;
+                if (this.type === 'hider') {
+                    // 躲藏者策略：前期往中央移動並把箱子往外推，後期躲在箱子後面
+                    if (phaseTimer > 0) {
+                        let targetX = canvas.width / 2;
+                        let targetY = canvas.height / 2;
+                        let angle = Math.atan2(targetY - this.y, targetX - this.x);
+                        this.vx = Math.cos(angle) * this.speed;
+                        this.vy = Math.sin(angle) * this.speed;
+                    } else {
+                        // 躲藏階段：隨機在中央基地附近移動躲避
+                        if (Math.random() < 0.03) {
+                            let angle = Math.random() * Math.PI * 2;
+                            this.vx = Math.cos(angle) * this.speed * 0.8;
+                            this.vy = Math.sin(angle) * this.speed * 0.8;
+                        }
+                    }
+                } else {
+                    // 尋找者策略：尋找離自己最近的躲藏者或推開箱子
+                    let target = hiders[0];
+                    let minDist = 99999;
+                    for (let h of hiders) {
+                        let d = Math.hypot(h.x - this.x, h.y - this.y);
+                        if (d < minDist) { minDist = d; target = h; }
+                    }
+                    if (target) {
+                        let angle = Math.atan2(target.y - this.y, target.x - this.x);
+                        this.vx = Math.cos(angle) * this.speed;
+                        this.vy = Math.sin(angle) * this.speed;
                     }
                 }
-                
-                if (aliveInGroup === 0) {
-                    totalEpisodes++;
-                    let scores = this.cars.map(c => c.totalScore);
-                    let avgScore = scores.reduce((a, b) => a + b, 0) / 5;
-                    let maxScore = Math.max(...scores);
-                    if (maxScore > globalMaxScore) globalMaxScore = maxScore;
 
-                    episodeHistory.push({ avgScore, maxScore });
-                    if (episodeHistory.length > 35) episodeHistory.shift();
+                //  移動與牆壁碰撞
+                this.x += this.vx;
+                this.y += this.vy;
+                if (this.x < 20) { this.x = 20; this.vx *= -1; }
+                if (this.x > canvas.width - 20) { this.x = canvas.width - 20; this.vx *= -1; }
+                if (this.y < 20) { this.y = 20; this.vy *= -1; }
+                if (this.y > canvas.height - 20) { this.y = canvas.height - 20; this.vy *= -1; }
 
-                    saveBrain(false);
-                    for (let car of this.cars) car.reset();
+                // 碰撞箱子 (推動物理)
+                for (let b of boxes) {
+                    let closestX = Math.max(b.x, Math.min(this.x, b.x + b.w));
+                    let closestY = Math.max(b.y, Math.min(this.y, b.y + b.h));
+                    let dist = Math.hypot(this.x - closestX, this.y - closestY);
+                    if (dist < this.radius) {
+                        let pushAngle = Math.atan2(this.y - closestY, this.x - closestX);
+                        b.vx += Math.cos(pushAngle) * 0.4;
+                        b.vy += Math.sin(pushAngle) * 0.4;
+                    }
                 }
             }
 
             draw() {
-                for (let car of this.cars) car.draw();
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fillStyle = this.type === 'hider' ? '#3fb950' : '#f85149';
+                ctx.fill();
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 2;
+                ctx.stroke();
             }
         }
 
-        function updateAgentCount(val) {
-            numAgents = parseInt(val);
-            document.getElementById("agentCountTxt").innerText = numAgents;
-            resetSimulation();
-        }
-
-        function resetSimulation() {
-            groups = [];
-            let numGroups = Math.ceil(numAgents / 5);
-            for (let i = 0; i < numGroups; i++) groups.push(new CarGroup());
-        }
-
-        loadPresetTrack();
-
-        function renderBarChart() {
-            statsCtx.clearRect(0, 0, statsCanvas.width, statsCanvas.height);
-            if (episodeHistory.length === 0) {
-                statsCtx.fillStyle = "#64748b";
-                statsCtx.font = "12px sans-serif";
-                statsCtx.fillText("等待第 1 組訓練完成...", 20, 65);
-                return;
+        class Box {
+            constructor(x, y, w, h) {
+                this.x = x;
+                this.y = y;
+                this.w = w;
+                this.h = h;
+                this.vx = 0;
+                this.vy = 0;
             }
 
-            let maxVal = Math.max(...episodeHistory.map(h => h.maxScore), 100);
-            let minVal = Math.min(...episodeHistory.map(h => h.avgScore), -100);
-            let range = (maxVal - minVal) || 1;
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.vx *= 0.85; // 摩擦力減速
+                this.vy *= 0.85;
 
-            let w = statsCanvas.width;
-            let h = statsCanvas.height;
-            let barGap = 4;
-            let barWidth = Math.max(8, (w - 40) / episodeHistory.length - barGap);
-            let zeroY = h - 15 - ((0 - minVal) / range) * (h - 30);
-
-            statsCtx.strokeStyle = "#334155";
-            statsCtx.lineWidth = 1;
-            statsCtx.beginPath();
-            statsCtx.moveTo(25, zeroY);
-            statsCtx.lineTo(w - 10, zeroY);
-            statsCtx.stroke();
-
-            episodeHistory.forEach((ep, i) => {
-                let x = 30 + i * (barWidth + barGap);
-                let maxH = ((ep.maxScore - 0) / range) * (h - 30);
-                let maxY = zeroY - maxH;
-                statsCtx.fillStyle = "rgba(16, 185, 129, 0.85)";
-                statsCtx.fillRect(x, Math.min(zeroY, maxY), barWidth, Math.abs(maxH));
-
-                let avgH = ((ep.avgScore - 0) / range) * (h - 30);
-                let avgY = zeroY - avgH;
-                statsCtx.fillStyle = "rgba(56, 189, 248, 0.9)";
-                statsCtx.fillRect(x + 2, Math.min(zeroY, avgY), Math.max(2, barWidth - 4), Math.abs(avgH));
-            });
-        }
-
-        function renderScene() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            // 終點與起點繪製
-            ctx.fillStyle = "#10b981";
-            ctx.fillRect(finishArea.x, finishArea.y, finishArea.w, finishArea.h);
-            ctx.fillStyle = "#fff"; ctx.font = "bold 13px sans-serif";
-            ctx.fillText("🏁 FINISH", finishArea.x + 15, finishArea.y + 55);
-
-            ctx.fillStyle = "rgba(56, 189, 248, 0.3)";
-            ctx.beginPath(); ctx.arc(startPoint.x, startPoint.y, 18, 0, Math.PI*2); ctx.fill();
-
-            // 賽道牆壁
-            ctx.strokeStyle = "#f43f5e"; ctx.lineWidth = 5; ctx.lineCap = "round";
-            for (let w of walls) {
-                ctx.beginPath(); ctx.moveTo(w.x1, w.y1); ctx.lineTo(w.x2, w.y2); ctx.stroke();
+                // 邊界限制
+                if (this.x < 15) { this.x = 15; this.vx = 0; }
+                if (this.x + this.w > canvas.width - 15) { this.x = canvas.width - 15 - this.w; this.vx = 0; }
+                if (this.y < 15) { this.y = 15; this.vy = 0; }
+                if (this.y + this.h > canvas.height - 15) { this.y = canvas.height - 15 - this.h; this.vy = 0; }
             }
 
-            let totalAlive = 0;
-            for (let group of groups) {
-                group.draw();
-                for (let car of group.cars) {
-                    if (car.isAlive && !car.hasWon) totalAlive++;
-                }
+            draw() {
+                ctx.fillStyle = '#d29922';
+                ctx.fillRect(this.x, this.y, this.w, this.h);
+                ctx.strokeStyle = '#9e6a03';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(this.x, this.y, this.w, this.h);
             }
-
-            episodesValEl.innerText = totalEpisodes;
-            aliveValEl.innerText = `${totalAlive} / ${groups.length * 5}`;
-            topScoreValEl.innerText = globalMaxScore > -9000 ? Math.round(globalMaxScore) : 0;
-            qStatesValEl.innerText = Object.keys(qTable).length;
-
-            renderBarChart();
         }
+
+        function initSimulation() {
+            hiders = [
+                new Agent(100, 150, 'hider'),
+                new Agent(100, 260, 'hider'),
+                new Agent(100, 370, 'hider')
+            ];
+            seekers = [
+                new Agent(700, 200, 'seeker'),
+                new Agent(700, 320, 'seeker')
+            ];
+            boxes = [
+                new Box(380, 200, 35, 35),
+                new Box(380, 260, 35, 35),
+                new Box(380, 320, 35, 35),
+                new Box(340, 260, 35, 35)
+            ];
+            phaseTimer = 4.0;
+            gamePhase = "PREPARE";
+            roundTime = 0;
+        }
+
+        function resetRound() {
+            initSimulation();
+        }
+
+        function resetAll() {
+            round = 1;
+            initSimulation();
+        }
+
+        initSimulation();
 
         function gameLoop() {
-            if (!isPaused) {
-                let iterations = isFastMode ? 4 : 1;
-                for (let it = 0; it < iterations; it++) {
-                    for (let group of groups) group.update();
+            // 1. 更新邏輯
+            roundTime += 1 / 60;
+            if (phaseTimer > 0) {
+                phaseTimer -= 1 / 60;
+                hiderStatusEl.innerText = "建造堡壘中...";
+                seekerStatusEl.innerText = "冷凍等待中...";
+                if (phaseTimer <= 0) gamePhase = "SEEK";
+            } else {
+                hiderStatusEl.innerText = "躲藏防守中";
+                seekerStatusEl.innerText = "全力追擊中！";
+            }
+
+            for (let b of boxes) b.update();
+            for (let h of hiders) h.update();
+            for (let s of seekers) s.update();
+
+            // 檢查是否被抓到
+            for (let s of seekers) {
+                for (let h of hiders) {
+                    if (h.isAlive !== false && Math.hypot(s.x - h.x, s.y - h.y) < s.radius + h.radius) {
+                        h.isAlive = false; // 標記被抓
+                    }
                 }
             }
-            renderScene();
+
+            // 移除被抓到的躲藏者
+            hiders = hiders.filter(h => h.isAlive !== false);
+
+            if (hiders.length === 0) {
+                round++;
+                initSimulation();
+            }
+
+            // 2. 渲染畫面
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // 繪製地圖圍牆
+            ctx.strokeStyle = '#30363d';
+            ctx.lineWidth = 4;
+            ctx.strokeRect(10, 10, canvas.width - 20, canvas.height - 20);
+
+            // 繪製箱子與代理人
+            for (let b of boxes) b.draw();
+            for (let h of hiders) h.draw();
+            for (let s of seekers) s.draw();
+
+            // 更新 UI 狀態
+            timeValEl.innerText = roundTime.toFixed(1) + "s";
+            roundValEl.innerText = round;
+
             requestAnimationFrame(gameLoop);
         }
 
