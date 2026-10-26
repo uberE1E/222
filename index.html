@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>“I made something simple” - 瘋狂連鎖保齡球</title>
+    <title>視覺錯覺滾球解謎 (Isometric Puzzle)</title>
     <style>
         * { box-sizing: border-box; }
         body {
@@ -22,27 +22,28 @@
         h1 {
             margin: 4px 0;
             font-size: 22px;
-            color: #38bdf8;
-            text-shadow: 0 0 10px rgba(56, 189, 248, 0.4);
+            color: #facc15;
+            text-shadow: 0 0 10px rgba(250, 204, 21, 0.4);
         }
         .subtitle {
             font-size: 12px;
             color: #94a3b8;
-            margin-bottom: 10px;
+            margin-bottom: 12px;
         }
         #canvasWrapper {
             position: relative;
-            box-shadow: 0 12px 30px rgba(0,0,0,0.8);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.6);
             border-radius: 12px;
             overflow: hidden;
             border: 3px solid #334155;
         }
         canvas {
-            background-color: #1e1b4b;
+            background-color: #1e1b4b; /* 濃厚科技感背景 */
             display: block;
+            cursor: pointer;
         }
         .instructions {
-            margin-top: 12px;
+            margin-top: 14px;
             font-size: 12px;
             color: #cbd5e1;
             background: #1e293b;
@@ -50,233 +51,180 @@
             border-radius: 20px;
             border: 1px solid #475569;
         }
-        button {
-            background: #0284c7;
-            color: white;
-            border: none;
-            padding: 6px 14px;
+        kbd {
+            background: #334155;
+            color: #facc15;
+            padding: 2px 6px;
             border-radius: 4px;
             font-weight: bold;
-            cursor: pointer;
-            margin-left: 8px;
         }
-        button:hover { background: #0369a1; }
     </style>
 </head>
 <body>
 
-    <h1>🧑‍💻 “I made something simple” (我做了個簡單的小東西)</h1>
-    <div class="subtitle">獨立開發者口中「很簡單」的物理連鎖保齡球模擬器</div>
+    <h1>🟡 視覺錯覺幾何滾球解謎</h1>
+    <div class="subtitle">“I made something simple” 幾何解謎短片高仿重現</div>
 
     <div id="canvasWrapper">
-        <canvas id="gameCanvas" width="600" height="500"></canvas>
+        <canvas id="gameCanvas" width="500" height="500"></canvas>
     </div>
 
     <div class="instructions">
-        👉 點擊按鈕或畫面來<strong>發射小球</strong>，體驗那種「簡單」卻華麗到爆炸的連鎖反應！
-        <button onclick="resetSimulation()">重新發射</button>
+        💡 操作指示：點擊畫布或按 <kbd>空白鍵 (Space)</kbd> 旋轉黃色錯覺橋樑，讓紅球安全抵達終點！
     </div>
 
     <script>
         const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
 
-        // 模擬狀態
-        let ball = { x: 50, y: 80, vx: 0, vy: 0, radius: 10, active: false };
-        let stage = 0; // 0: 待命, 1: 下坡加速, 2: 旋轉齒輪區, 3: 彈跳板, 4: 撞擊保齡球
-        let gearAngle = 0;
-        let pins = [];
-        let hitPinsCount = 0;
-        let message = "點擊畫面發射小球";
+        let gameState = "PLAYING"; // PLAYING, WIN
+        let bridgeAngle = 0; // 0, 90, 180, 270
 
-        function initPins() {
-            pins = [];
-            let startX = 480, startY = 380;
-            // 經典保齡球三角陣型
-            let rows = 4;
-            for (let r = 0; r < rows; r++) {
-                for (let c = 0; c <= r; c++) {
-                    pins.push({
-                        x: startX + r * 22,
-                        y: startY + (c - r / 2) * 24,
-                        vx: 0, vy: 0,
-                        radius: 7,
-                        hit: false
-                    });
-                }
+        // 紅球狀態
+        let ball = {
+            x: 120,
+            y: 380,
+            targetIndex: 0,
+            speed: 2.2
+        };
+
+        // 賽道節點 (等角視角路徑)
+        const pathPoints = [
+            { x: 120, y: 380 }, // 0: 起點
+            { x: 250, y: 300 }, // 1: 轉角一
+            { x: 250, y: 200 }, // 2: 橋樑接合處
+            { x: 380, y: 120 }, // 3: 終點高塔前
+            { x: 380, y: 80 }   // 4: 終點保齡球瓶區
+        ];
+
+        function triggerAction() {
+            if (gameState === "WIN") {
+                resetGame();
+                return;
             }
-            hitPinsCount = 0;
+            bridgeAngle = (bridgeAngle + 90) % 360;
         }
 
-        initPins();
-
-        function launchBall() {
-            ball.x = 50;
-            ball.y = 80;
-            ball.vx = 4.5;
-            ball.vy = 0;
-            ball.active = true;
-            stage = 1;
-            message = "小球出發！看似簡單...";
-            initPins();
-        }
-
-        window.addEventListener("click", (e) => {
-            // 避免點到按鈕重複觸發
-            if (e.target.tagName === 'BUTTON') return;
-            if (!ball.active) launchBall();
+        window.addEventListener("keydown", (e) => {
+            if (e.key === " " || e.key === "Enter") triggerAction();
         });
+        canvas.addEventListener("click", triggerAction);
+
+        function resetGame() {
+            gameState = "PLAYING";
+            bridgeAngle = 0;
+            ball.x = pathPoints[0].x;
+            ball.y = pathPoints[0].y;
+            ball.targetIndex = 1;
+        }
 
         function update() {
-            gearAngle += 0.05;
+            if (gameState === "WIN") return;
 
-            if (!ball.active) return;
+            let target = pathPoints[ball.targetIndex];
+            let dx = target.x - ball.x;
+            let dy = target.y - ball.y;
+            let dist = Math.hypot(dx, dy);
 
-            // 物理運動與機關連鎖
-            ball.vy += 0.25; // 重力
-            ball.x += ball.vx;
-            ball.y += ball.vy;
-
-            // 1. 第一段斜坡
-            if (stage === 1 && ball.x > 180 && ball.y > 180) {
-                stage = 2;
-                message = "進入旋轉齒輪與錯覺加速區！";
-            }
-
-            // 2. 第二段旋轉齒輪區
-            if (stage === 2 && ball.x > 320) {
-                stage = 3;
-                ball.vy = -7.5; // 彈跳板往上彈
-                ball.vx = 6;
-                message = "彈跳板啟動！重力反轉！";
-            }
-
-            // 3. 軌道邊界反彈與引導
-            // 地板防護
-            if (ball.y > 450 && ball.x < 450) {
-                ball.y = 450;
-                ball.vy = -ball.vy * 0.4;
-            }
-            // 天花板
-            if (ball.y < 40) {
-                ball.y = 40;
-                ball.vy = 2;
-            }
-
-            // 4. 撞擊保齡球區
-            if (ball.x > 440 && stage < 4) {
-                stage = 4;
-                message = "STRIKE！連鎖反應大爆炸！";
-            }
-
-            // 保齡球物理碰撞
-            pins.forEach(pin => {
-                let dist = Math.hypot(ball.x - pin.x, ball.y - pin.y);
-                if (dist < ball.radius + pin.radius) {
-                    pin.hit = true;
-                    let angle = Math.atan2(pin.y - ball.y, pin.x - ball.x);
-                    pin.vx = Math.cos(angle) * 7;
-                    pin.vy = Math.sin(angle) * 7;
+            // 當紅球正要通過橋樑路段 (索引 2)
+            if (ball.targetIndex === 3) {
+                // 如果此時橋樑角度不是 0 或者是錯開的，球會掉落或卡住
+                if (bridgeAngle !== 0) {
+                    // 模擬錯覺不通，彈回起點
+                    ball.x = pathPoints[0].x;
+                    ball.y = pathPoints[0].y;
+                    ball.targetIndex = 1;
+                    return;
                 }
+            }
 
-                if (pin.hit) {
-                    pin.x += pin.vx;
-                    pin.y += pin.vy;
-                    pin.vx *= 0.92;
-                    pin.vy *= 0.92;
+            if (dist < ball.speed) {
+                ball.x = target.x;
+                ball.y = target.y;
+                if (ball.targetIndex < pathPoints.length - 1) {
+                    ball.targetIndex++;
+                } else {
+                    gameState = "WIN";
                 }
-            });
-
-            // 計算倒下的瓶子數
-            hitPinsCount = pins.filter(p => p.hit).length;
+            } else {
+                ball.x += (dx / dist) * ball.speed;
+                ball.y += (dy / dist) * ball.speed;
+            }
         }
 
         function draw() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // 繪製極簡賽道與裝飾線條 (呼應影片中的極簡風格)
-            ctx.strokeStyle = "#475569";
+            // 1. 繪製底部黃色幾何結構 (Isometric 風格)
+            ctx.fillStyle = "#eab308";
+            ctx.strokeStyle = "#ca8a04";
             ctx.lineWidth = 3;
 
-            // 起始滑軌
+            // 主賽道底座
             ctx.beginPath();
-            ctx.moveTo(30, 90);
-            ctx.lineTo(200, 220);
+            ctx.moveTo(100, 400);
+            ctx.lineTo(270, 300);
+            ctx.lineTo(270, 220);
+            ctx.lineTo(100, 320);
+            ctx.closePath();
+            ctx.fill();
             ctx.stroke();
 
-            // 中間迴旋軌道
-            ctx.strokeStyle = "#38bdf8";
-            ctx.beginPath();
-            ctx.arc(260, 220, 60, Math.PI, 0, false);
-            ctx.stroke();
-
-            // 旋轉齒輪視覺
+            // 2. 繪製可旋轉的錯覺橋樑區
             ctx.save();
-            ctx.translate(260, 220);
-            ctx.rotate(gearAngle);
-            ctx.strokeStyle = "#f43f5e";
-            ctx.lineWidth = 2;
-            ctx.strokeRect(-15, -15, 30, 30);
+            ctx.translate(250, 200);
+            ctx.rotate((bridgeAngle * Math.PI) / 180);
+
+            ctx.fillStyle = bridgeAngle === 0 ? "#facc15" : "#ca8a04"; // 接通變亮黃色
+            ctx.fillRect(-25, -25, 50, 50);
+            ctx.strokeRect(-25, -25, 50, 50);
+
             ctx.restore();
 
-            // 彈跳板
+            // 3. 繪製上層終點塔與建築
             ctx.fillStyle = "#eab308";
-            ctx.fillRect(340, 260, 60, 10);
+            ctx.beginPath();
+            ctx.moveTo(350, 140);
+            ctx.lineTo(410, 100);
+            ctx.lineTo(410, 60);
+            ctx.lineTo(350, 100);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
 
-            // 終點保齡球底座
-            ctx.fillStyle = "#334155";
-            ctx.fillRect(460, 330, 110, 120);
+            // 4. 終點保齡球瓶
+            ctx.fillStyle = gameState === "WIN" ? "#94a3b8" : "#ffffff";
+            ctx.beginPath();
+            ctx.arc(380, 75 + (gameState === "WIN" ? 10 : 0), 7, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = "#ef4444";
+            ctx.lineWidth = 2;
+            ctx.stroke();
 
-            // 繪製保齡球瓶
-            pins.forEach(pin => {
-                ctx.fillStyle = pin.hit ? "#94a3b8" : "#ffffff";
-                ctx.beginPath();
-                ctx.arc(pin.x, pin.y, pin.radius, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.strokeStyle = "#ef4444";
-                ctx.lineWidth = 1.5;
-                ctx.stroke();
-            });
+            // 5. 紅色滾球
+            ctx.fillStyle = "#ef4444";
+            ctx.beginPath();
+            ctx.arc(ball.x, ball.y, 12, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = "#ffffff";
+            ctx.lineWidth = 2;
+            ctx.stroke();
 
-            // 繪製主角小球
-            if (ball.active) {
-                ctx.fillStyle = "#ef4444";
-                ctx.beginPath();
-                ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.strokeStyle = "#ffffff";
-                ctx.lineWidth = 2;
-                ctx.stroke();
-            } else {
-                // 待命提示球
-                ctx.fillStyle = "#ef4444";
-                ctx.beginPath();
-                ctx.arc(50, 80, ball.radius, 0, Math.PI * 2);
-                ctx.fill();
-            }
-
-            // 狀態與訊息文字
-            ctx.fillStyle = "#f8fafc";
-            ctx.font = "bold 14px sans-serif";
-            ctx.fillText(`狀態: ${message}`, 20, 35);
-            ctx.fillText(`倒塌瓶數: ${hitPinsCount} / ${pins.length}`, 20, 55);
-
-            if (!ball.active) {
-                ctx.fillStyle = "rgba(15, 23, 42, 0.6)";
+            // 6. 通關提示
+            if (gameState === "WIN") {
+                ctx.fillStyle = "rgba(15, 23, 42, 0.85)";
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
-                ctx.fillStyle = "#38bdf8";
-                ctx.font = "bold 24px sans-serif";
+
+                ctx.fillStyle = "#facc15";
+                ctx.font = "bold 26px sans-serif";
                 ctx.textAlign = "center";
-                ctx.fillText("點擊任意處發射「簡單」小球", canvas.width / 2, canvas.height / 2);
+                ctx.fillText("🎉 撞倒保齡球瓶！完美過關", canvas.width / 2, canvas.height / 2 - 15);
+
+                ctx.fillStyle = "#f8fafc";
+                ctx.font = "14px sans-serif";
+                ctx.fillText("點擊畫布或按空白鍵再次挑戰", canvas.width / 2, canvas.height / 2 + 25);
                 ctx.textAlign = "left";
             }
-        }
-
-        function resetSimulation() {
-            ball.active = false;
-            stage = 0;
-            message = "等待發射...";
-            initPins();
         }
 
         function gameLoop() {
