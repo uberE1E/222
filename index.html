@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OpenAI Hide & Seek 多代理人躲迷藏模擬器</title>
+    <title>OpenAI 3D 躲貓貓 AI 模擬器 (Multi-Agent Hide and Seek)</title>
     <style>
         * { box-sizing: border-box; }
         body {
             margin: 0;
-            background-color: #0d1117;
-            color: #c9d1d9;
+            background-color: #0b0f19;
+            color: #f0f4f8;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             display: flex;
             flex-direction: column;
@@ -21,30 +21,31 @@
         }
         h1 {
             margin: 4px 0;
-            font-size: 22px;
-            color: #58a6ff;
-            text-shadow: 0 0 10px rgba(88, 166, 255, 0.4);
+            font-size: 20px;
+            color: #38bdf8;
+            text-shadow: 0 0 10px rgba(56, 189, 248, 0.4);
         }
         .subtitle {
             font-size: 11px;
-            color: #8b949e;
-            margin-bottom: 8px;
+            color: #94a3b8;
+            margin-bottom: 6px;
         }
         #mainContainer {
             display: flex;
-            gap: 15px;
+            gap: 12px;
             align-items: flex-start;
         }
-        canvas {
-            border: 3px solid #30363d;
-            background-color: #161b22;
+        #canvasContainer {
+            position: relative;
+            border: 3px solid #1e293b;
+            border-radius: 12px;
+            overflow: hidden;
             box-shadow: 0 10px 30px rgba(0,0,0,0.8);
-            border-radius: 8px;
         }
         #controlPanel {
             width: 280px;
-            background: #21262d;
-            border: 1px solid #30363d;
+            background: #1e293b;
+            border: 1px solid #334155;
             border-radius: 8px;
             padding: 12px;
             display: flex;
@@ -53,13 +54,11 @@
             box-shadow: 0 4px 20px rgba(0,0,0,0.5);
         }
         .panel-section {
-            background: #161b22;
+            background: #0f172a;
             padding: 8px 10px;
             border-radius: 6px;
-            border-left: 4px solid #58a6ff;
+            border-left: 4px solid #38bdf8;
         }
-        .panel-section.seeker { border-left-color: #f85149; }
-        .panel-section.hider { border-left-color: #3fb950; }
         .panel-section h3 {
             margin: 0 0 6px 0;
             font-size: 13px;
@@ -72,11 +71,11 @@
             justify-content: space-between;
             font-size: 11px;
             margin-bottom: 3px;
-            color: #8b949e;
+            color: #cbd5e1;
         }
-        .stat-val { font-weight: bold; color: #58a6ff; }
+        .stat-val { font-weight: bold; color: #10b981; }
         button {
-            background-color: #238636;
+            background-color: #0284c7;
             color: white;
             border: none;
             padding: 6px 10px;
@@ -84,276 +83,250 @@
             font-size: 11px;
             font-weight: bold;
             cursor: pointer;
-            transition: all 0.2s;
             width: 100%;
             margin-top: 4px;
+            transition: all 0.2s;
         }
-        button:hover { background-color: #2ea043; }
-        button.secondary { background-color: #30363d; }
-        button.secondary:hover { background-color: #484f58; }
+        button:hover { background-color: #0369a1; }
+        button.secondary { background-color: #475569; }
+        button.secondary:hover { background-color: #64748b; }
         .instructions {
             font-size: 10px;
-            color: #8b949e;
-            line-height: 1.3;
-            background: #161b22;
-            padding: 6px;
+            color: #94a3b8;
+            line-height: 1.4;
+            background: #0f172a;
+            padding: 8px;
             border-radius: 4px;
         }
     </style>
+    <!-- 引入 Three.js 3D 渲染庫 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
 
-    <h1>🕵️‍♂️ Multi-Agent Hide & Seek 模擬器</h1>
-    <div class="subtitle">致敬 OpenAI 經典多代理人對抗與工具利用研究</div>
+    <h1>🤖 OpenAI 3D 躲貓貓 AI 模擬器</h1>
+    <div class="subtitle">模擬多代理智慧體 (Multi-Agent) 學習築牆防禦與搜尋對抗</div>
 
     <div id="mainContainer">
-        <canvas id="simCanvas" width="800" height="520"></canvas>
+        <div id="canvasContainer"></div>
 
         <div id="controlPanel">
-            <div class="panel-section hider">
-                <h3>🟢 躲藏者 (Hiders)</h3>
-                <div class="stat-row"><span>目標:</span> <span>推動箱子建造防禦堡壘</span></div>
-                <div class="stat-row"><span>存活狀態:</span> <span id="hiderStatus" class="stat-val">防守中</span></div>
-            </div>
-
-            <div class="panel-section seeker">
-                <h3>🔴 尋找者 (Seekers)</h3>
-                <div class="stat-row"><span>目標:</span> <span>突破障礙尋找躲藏者</span></div>
-                <div class="stat-row"><span>狀態:</span> <span id="seekerStatus" class="stat-val">追擊中</span></div>
+            <div class="panel-section">
+                <h3>🎮 模擬器控制</h3>
+                <button onclick="resetSimulation()">🔄 重新開始模擬</button>
+                <button class="secondary" onclick="togglePause()">⏸️ 暫停 / 播放</button>
             </div>
 
             <div class="panel-section">
-                <h3>⚙️ 模擬控制</h3>
-                <div class="stat-row"><span>回合時間:</span> <span id="timeVal" class="stat-val">0.0s</span></div>
-                <div class="stat-row"><span>當前回合數:</span> <span id="roundVal" class="stat-val">1</span></div>
-                <button onclick="resetRound()">🔄 重新開始本回合</button>
-                <button class="secondary" onclick="resetAll()">🗑️ 重設所有統計</button>
+                <h3>📊 3D 戰況統計</h3>
+                <div class="stat-row"><span>模擬回合 (Round):</span> <span id="roundVal" class="stat-val">1</span></div>
+                <div class="stat-row"><span>躲藏者 (Hiders):</span> <span id="hiderVal" class="stat-val">3 (藍色)</span></div>
+                <div class="stat-row"><span>尋找者 (Seekers):</span> <span id="seekerVal" class="stat-val">2 (紅色)</span></div>
+                <div class="stat-row"><span>箱子/障礙物:</span> <span id="boxVal" class="stat-val">4</span></div>
             </div>
 
             <div class="instructions">
-                <strong>💡 遊戲規則：</strong><br>
-                • 遊戲開始有短暫準備期，躲藏者（綠點）會合力將箱子（方塊）推到中央圍成掩體。<br>
-                • 尋找者（紅點）解凍後會試圖推開箱子或繞過去抓人！
+                <strong>🕹️ 3D 視角操作：</strong><br>
+                • 模擬器會自動從上帝視角觀看 3D 競技場。<br>
+                • <strong>藍色方（Hiders）</strong>會自動移動並推動箱子圍成防禦基地。<br>
+                • <strong>紅色方（Seekers）</strong>會尋找突破口追捕藍色方。
             </div>
         </div>
     </div>
 
     <script>
-        const canvas = document.getElementById("simCanvas");
-        const ctx = canvas.getContext("2d");
+        let scene, camera, renderer;
+        let hiders = [], seekers = [], boxes = [], walls = [];
+        let isPaused = false;
+        let roundCount = 1;
 
-        // UI 元素
-        const timeValEl = document.getElementById("timeVal");
-        const roundValEl = document.getElementById("roundVal");
-        const hiderStatusEl = document.getElementById("hiderStatus");
-        const seekerStatusEl = document.getElementById("seekerStatus");
+        const arenaSize = 30;
 
-        let round = 1;
-        let roundTime = 0;
-        let gamePhase = "PREPARE"; // PREPARE (準備期), SEEK (尋找期)
-        let phaseTimer = 4.0; // 4秒準備期
+        function init3D() {
+            const container = document.getElementById("canvasContainer");
+            
+            // 建立 3D 場景
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x0f172a);
+            scene.fog = new THREE.Fog(0x0f172a, 35, 75);
 
-        //  агенты (Agents)
-        let hiders = [];
-        let seekers = [];
-        let boxes = [];
+            // 攝影機
+            camera = new THREE.PerspectiveCamera(50, 750 / 480, 0.1, 1000);
+            camera.position.set(0, 32, 28);
+            camera.lookAt(0, 0, 0);
 
-        class Agent {
-            constructor(x, y, type) {
-                this.x = x;
-                this.y = y;
-                this.vx = 0;
-                this.vy = 0;
-                this.radius = 12;
-                this.type = type; // 'hider' 或 'seeker'
-                this.speed = type === 'hider' ? 2.2 : 2.5;
+            // 渲染器
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(750, 480);
+            renderer.shadowMap.enabled = true;
+            container.appendChild(renderer.domElement);
+
+            // 光照設定
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambientLight);
+
+            const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            dirLight.position.set(20, 40, 20);
+            dirLight.castShadow = true;
+            scene.add(dirLight);
+
+            // 地板
+            const floorGeo = new THREE.PlaneGeometry(arenaSize, arenaSize);
+            const floorMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.8 });
+            const floor = new THREE.Mesh(floorGeo, floorMat);
+            floor.rotation.x = -Math.PI / 2;
+            floor.receiveShadow = true;
+            scene.add(floor);
+
+            // 邊界牆壁
+            createWalls();
+
+            // 建立代理與箱子
+            resetEntities();
+
+            animate();
+        }
+
+        function createWalls() {
+            const wallMat = new THREE.MeshStandardMaterial({ color: 0x334155 });
+            const thickness = 1;
+            const h = 4;
+
+            const wallGeos = [
+                { w: arenaSize, d: thickness, x: 0, z: -arenaSize/2 },
+                { w: arenaSize, d: thickness, x: 0, z: arenaSize/2 },
+                { w: thickness, d: arenaSize, x: -arenaSize/2, z: 0 },
+                { w: thickness, d: arenaSize, x: arenaSize/2, z: 0 }
+            ];
+
+            wallGeos.forEach(wg => {
+                const geo = new THREE.BoxGeometry(wg.w, h, wg.d);
+                const mesh = new THREE.Mesh(geo, wallMat);
+                mesh.position.set(wg.x, h/2, wg.z);
+                mesh.castShadow = true;
+                mesh.receiveShadow = true;
+                scene.add(mesh);
+                walls.push(mesh);
+            });
+        }
+
+        function resetEntities() {
+            // 清除舊物件
+            [...hiders, ...seekers, ...boxes].forEach(obj => scene.remove(obj.mesh));
+            hiders = [];
+            seekers = [];
+            boxes = [];
+
+            // 1. 建立箱子 (可被推動的 3D 方塊)
+            const boxGeo = new THREE.BoxGeometry(3, 3, 3);
+            const boxMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, roughness: 0.4 });
+            for (let i = 0; i < 4; i++) {
+                const mesh = new THREE.Mesh(boxGeo, boxMat);
+                mesh.position.set((Math.random() - 0.5) * 10, 1.5, (Math.random() - 0.5) * 10);
+                mesh.castShadow = true;
+                mesh.receiveShadow = true;
+                scene.add(mesh);
+                boxes.push({ mesh, vx: 0, vz: 0 });
             }
 
-            update() {
-                if (gamePhase === "PREPARE" && this.type === 'seeker') return; // 尋找者初期冷凍
+            // 2. 建立躲藏者 (Hiders - 藍色)
+            const hiderGeo = new THREE.SphereGeometry(1.2, 16, 16);
+            const hiderMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, roughness: 0.3 });
+            for (let i = 0; i < 3; i++) {
+                const mesh = new THREE.Mesh(hiderGeo, hiderMat);
+                mesh.position.set(-10 + (Math.random() - 0.5) * 4, 1.2, -10 + (Math.random() - 0.5) * 4);
+                mesh.castShadow = true;
+                scene.add(mesh);
+                hiders.push({ mesh, vx: (Math.random()-0.5)*0.1, vz: (Math.random()-0.5)*0.1 });
+            }
 
-                if (this.type === 'hider') {
-                    // 躲藏者策略：前期往中央移動並把箱子往外推，後期躲在箱子後面
-                    if (phaseTimer > 0) {
-                        let targetX = canvas.width / 2;
-                        let targetY = canvas.height / 2;
-                        let angle = Math.atan2(targetY - this.y, targetX - this.x);
-                        this.vx = Math.cos(angle) * this.speed;
-                        this.vy = Math.sin(angle) * this.speed;
-                    } else {
-                        // 躲藏階段：隨機在中央基地附近移動躲避
-                        if (Math.random() < 0.03) {
-                            let angle = Math.random() * Math.PI * 2;
-                            this.vx = Math.cos(angle) * this.speed * 0.8;
-                            this.vy = Math.sin(angle) * this.speed * 0.8;
-                        }
-                    }
-                } else {
-                    // 尋找者策略：尋找離自己最近的躲藏者或推開箱子
-                    let target = hiders[0];
-                    let minDist = 99999;
-                    for (let h of hiders) {
-                        let d = Math.hypot(h.x - this.x, h.y - this.y);
-                        if (d < minDist) { minDist = d; target = h; }
-                    }
-                    if (target) {
-                        let angle = Math.atan2(target.y - this.y, target.x - this.x);
-                        this.vx = Math.cos(angle) * this.speed;
-                        this.vy = Math.sin(angle) * this.speed;
-                    }
+            // 3. 建立尋找者 (Seekers - 紅色)
+            const seekerGeo = new THREE.ConeGeometry(1.3, 3, 16);
+            const seekerMat = new THREE.MeshStandardMaterial({ color: 0xf43f5e, roughness: 0.3 });
+            for (let i = 0; i < 2; i++) {
+                const mesh = new THREE.Mesh(seekerGeo, seekerMat);
+                mesh.rotation.x = Math.PI / 2;
+                mesh.position.set(10 + (Math.random() - 0.5) * 4, 1.5, 10 + (Math.random() - 0.5) * 4);
+                mesh.castShadow = true;
+                scene.add(mesh);
+                seekers.push({ mesh, vx: (Math.random()-0.5)*0.1, vz: (Math.random()-0.5)*0.1 });
+            }
+        }
+
+        function resetSimulation() {
+            roundCount++;
+            document.getElementById("roundVal").innerText = roundCount;
+            resetEntities();
+        }
+
+        function togglePause() {
+            isPaused = !isPaused;
+        }
+
+        // 3D 物理與 AI 行為邏輯
+        function updateAI() {
+            if (isPaused) return;
+
+            // 躲藏者行為：聚集並推動箱子組成防禦基地
+            hiders.forEach(h => {
+                h.mesh.position.x += h.vx;
+                h.mesh.position.z += h.vz;
+
+                // 隨機轉向與邊界碰撞
+                if (Math.abs(h.mesh.position.x) > arenaSize/2 - 3) h.vx *= -1;
+                if (Math.abs(h.mesh.position.z) > arenaSize/2 - 3) h.vz *= -1;
+                if (Math.random() < 0.02) {
+                    h.vx = (Math.random() - 0.5) * 0.12;
+                    h.vz = (Math.random() - 0.5) * 0.12;
                 }
 
-                //  移動與牆壁碰撞
-                this.x += this.vx;
-                this.y += this.vy;
-                if (this.x < 20) { this.x = 20; this.vx *= -1; }
-                if (this.x > canvas.width - 20) { this.x = canvas.width - 20; this.vx *= -1; }
-                if (this.y < 20) { this.y = 20; this.vy *= -1; }
-                if (this.y > canvas.height - 20) { this.y = canvas.height - 20; this.vy *= -1; }
-
-                // 碰撞箱子 (推動物理)
-                for (let b of boxes) {
-                    let closestX = Math.max(b.x, Math.min(this.x, b.x + b.w));
-                    let closestY = Math.max(b.y, Math.min(this.y, b.y + b.h));
-                    let dist = Math.hypot(this.x - closestX, this.y - closestY);
-                    if (dist < this.radius) {
-                        let pushAngle = Math.atan2(this.y - closestY, this.x - closestX);
-                        b.vx += Math.cos(pushAngle) * 0.4;
-                        b.vy += Math.sin(pushAngle) * 0.4;
+                // 箱子推動互動
+                boxes.forEach(b => {
+                    let dist = h.mesh.position.distanceTo(b.mesh.position);
+                    if (dist < 2.5) {
+                        b.mesh.position.x += h.vx * 1.5;
+                        b.mesh.position.z += h.vz * 1.5;
                     }
+                });
+            });
+
+            // 尋找者行為：追逐躲藏者
+            seekers.forEach(s => {
+                // 尋找最近的躲藏者
+                let target = hiders[0].mesh.position;
+                let minDist = s.mesh.position.distanceTo(target);
+                hiders.forEach(h => {
+                    let d = s.mesh.position.distanceTo(h.mesh.position);
+                    if (d < minDist) { minDist = d; target = h.mesh.position; }
+                });
+
+                // 朝目標移動
+                let dx = target.x - s.mesh.position.x;
+                let dz = target.z - s.mesh.position.z;
+                let len = Math.hypot(dx, dz);
+                if (len > 0.1) {
+                    s.mesh.position.x += (dx / len) * 0.08;
+                    s.mesh.position.z += (dz / len) * 0.08;
                 }
-            }
 
-            draw() {
-                ctx.beginPath();
-                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-                ctx.fillStyle = this.type === 'hider' ? '#3fb950' : '#f85149';
-                ctx.fill();
-                ctx.strokeStyle = '#fff';
-                ctx.lineWidth = 2;
-                ctx.stroke();
-            }
-        }
-
-        class Box {
-            constructor(x, y, w, h) {
-                this.x = x;
-                this.y = y;
-                this.w = w;
-                this.h = h;
-                this.vx = 0;
-                this.vy = 0;
-            }
-
-            update() {
-                this.x += this.vx;
-                this.y += this.vy;
-                this.vx *= 0.85; // 摩擦力減速
-                this.vy *= 0.85;
-
-                // 邊界限制
-                if (this.x < 15) { this.x = 15; this.vx = 0; }
-                if (this.x + this.w > canvas.width - 15) { this.x = canvas.width - 15 - this.w; this.vx = 0; }
-                if (this.y < 15) { this.y = 15; this.vy = 0; }
-                if (this.y + this.h > canvas.height - 15) { this.y = canvas.height - 15 - this.h; this.vy = 0; }
-            }
-
-            draw() {
-                ctx.fillStyle = '#d29922';
-                ctx.fillRect(this.x, this.y, this.w, this.h);
-                ctx.strokeStyle = '#9e6a03';
-                ctx.lineWidth = 2;
-                ctx.strokeRect(this.x, this.y, this.w, this.h);
-            }
-        }
-
-        function initSimulation() {
-            hiders = [
-                new Agent(100, 150, 'hider'),
-                new Agent(100, 260, 'hider'),
-                new Agent(100, 370, 'hider')
-            ];
-            seekers = [
-                new Agent(700, 200, 'seeker'),
-                new Agent(700, 320, 'seeker')
-            ];
-            boxes = [
-                new Box(380, 200, 35, 35),
-                new Box(380, 260, 35, 35),
-                new Box(380, 320, 35, 35),
-                new Box(340, 260, 35, 35)
-            ];
-            phaseTimer = 4.0;
-            gamePhase = "PREPARE";
-            roundTime = 0;
-        }
-
-        function resetRound() {
-            initSimulation();
-        }
-
-        function resetAll() {
-            round = 1;
-            initSimulation();
-        }
-
-        initSimulation();
-
-        function gameLoop() {
-            // 1. 更新邏輯
-            roundTime += 1 / 60;
-            if (phaseTimer > 0) {
-                phaseTimer -= 1 / 60;
-                hiderStatusEl.innerText = "建造堡壘中...";
-                seekerStatusEl.innerText = "冷凍等待中...";
-                if (phaseTimer <= 0) gamePhase = "SEEK";
-            } else {
-                hiderStatusEl.innerText = "躲藏防守中";
-                seekerStatusEl.innerText = "全力追擊中！";
-            }
-
-            for (let b of boxes) b.update();
-            for (let h of hiders) h.update();
-            for (let s of seekers) s.update();
-
-            // 檢查是否被抓到
-            for (let s of seekers) {
-                for (let h of hiders) {
-                    if (h.isAlive !== false && Math.hypot(s.x - h.x, s.y - h.y) < s.radius + h.radius) {
-                        h.isAlive = false; // 標記被抓
+                // 尋找者撞擊箱子可以推開箱子
+                boxes.forEach(b => {
+                    let dist = s.mesh.position.distanceTo(b.mesh.position);
+                    if (dist < 2.5) {
+                        b.mesh.position.x += (dx / len) * 0.1;
+                        b.mesh.position.z += (dz / len) * 0.1;
                     }
-                }
-            }
-
-            // 移除被抓到的躲藏者
-            hiders = hiders.filter(h => h.isAlive !== false);
-
-            if (hiders.length === 0) {
-                round++;
-                initSimulation();
-            }
-
-            // 2. 渲染畫面
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            // 繪製地圖圍牆
-            ctx.strokeStyle = '#30363d';
-            ctx.lineWidth = 4;
-            ctx.strokeRect(10, 10, canvas.width - 20, canvas.height - 20);
-
-            // 繪製箱子與代理人
-            for (let b of boxes) b.draw();
-            for (let h of hiders) h.draw();
-            for (let s of seekers) s.draw();
-
-            // 更新 UI 狀態
-            timeValEl.innerText = roundTime.toFixed(1) + "s";
-            roundValEl.innerText = round;
-
-            requestAnimationFrame(gameLoop);
+                });
+            });
         }
 
-        requestAnimationFrame(gameLoop);
+        function animate() {
+            requestAnimationFrame(animate);
+            updateAI();
+            renderer.render(scene, camera);
+        }
+
+        window.onload = init3D;
     </script>
 </body>
 </html>
