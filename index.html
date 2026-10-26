@@ -3,415 +3,468 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>美少女 AI 棋陣：Q-Learning 覺醒之路</title>
+    <title>多重 Q-Learning AI 賽車與生存進化模擬器</title>
     <style>
-        :root {
-            --bg-color: #0f051d;
-            --panel-bg: rgba(30, 15, 50, 0.85);
-            --accent-pink: #ff2a85;
-            --accent-cyan: #00f0ff;
-            --text-color: #f0e6ff;
-        }
         body {
             margin: 0;
-            background-color: var(--bg-color);
-            color: var(--text-color);
+            background-color: #111;
+            color: #eee;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             min-height: 100vh;
-            overflow-x: hidden;
+            overflow: hidden;
+            user-select: none;
         }
         h1 {
-            margin: 10px 0;
-            font-size: 24px;
-            color: var(--accent-cyan);
-            text-shadow: 0 0 10px var(--accent-cyan);
+            margin: 5px 0;
+            font-size: 22px;
+            color: #f1c40f;
+            text-shadow: 0 0 10px rgba(241, 196, 15, 0.5);
         }
-        #gameWrapper {
+        #mainContainer {
             display: flex;
-            gap: 20px;
-            background: var(--panel-bg);
-            border: 2px solid var(--accent-pink);
-            border-radius: 12px;
-            padding: 20px;
-            box-shadow: 0 0 30px rgba(255, 42, 133, 0.4);
-            max-width: 1200px;
-        }
-        .side-panel {
-            width: 280px;
-            display: flex;
-            flex-direction: column;
             gap: 15px;
+            align-items: flex-start;
         }
         canvas {
-            border: 2px solid #555;
-            background-color: #150a24;
+            border: 4px solid #333;
+            background-color: #222;
+            box-shadow: 0 0 20px rgba(0,0,0,0.8);
             border-radius: 8px;
-            box-shadow: inset 0 0 20px rgba(0,0,0,0.8);
         }
-        .btn {
-            background: linear-gradient(45deg, var(--accent-pink), #9c27b0);
-            color: white;
-            border: none;
-            padding: 10px 15px;
-            border-radius: 6px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: 0.2s;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        #controlPanel {
+            width: 300px;
+            background: rgba(30, 30, 30, 0.95);
+            border: 2px solid #444;
+            border-radius: 8px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            max-height: 550px;
+            overflow-y: auto;
         }
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 15px rgba(255, 42, 133, 0.6);
-        }
-        .panel-box {
-            background: rgba(15, 5, 25, 0.9);
-            border: 1px solid #444;
-            padding: 12px;
-            border-radius: 6px;
-            font-size: 13px;
-            line-height: 1.4;
-        }
-        .panel-title {
-            font-weight: bold;
-            color: var(--accent-cyan);
-            margin-bottom: 5px;
+        .panel-section {
             border-bottom: 1px solid #444;
-            padding-bottom: 3px;
+            padding-bottom: 10px;
+        }
+        .panel-section h3 {
+            margin: 0 0 8px 0;
+            font-size: 14px;
+            color: #3498db;
         }
         .stat-row {
             display: flex;
             justify-content: space-between;
-            margin: 4px 0;
+            font-size: 13px;
+            margin-bottom: 4px;
         }
-        #chatBox {
-            height: 90px;
-            overflow-y: auto;
-            background: rgba(0,0,0,0.5);
-            padding: 8px;
+        .stat-val {
+            font-weight: bold;
+            color: #2ecc71;
+        }
+        button {
+            background-color: #e67e22;
+            color: white;
+            border: none;
+            padding: 8px 12px;
             border-radius: 4px;
-            font-size: 12px;
-            color: #ff99c8;
-        }
-        .slider-group {
-            margin: 6px 0;
-        }
-        .slider-group label {
-            font-size: 11px;
-            display: block;
-            color: #aaa;
-        }
-        .slider-group input {
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.2s;
             width: 100%;
+            margin-top: 4px;
+        }
+        button:hover { background-color: #d35400; }
+        button.secondary { background-color: #7f8c8d; }
+        button.secondary:hover { background-color: #636e72; }
+        button.danger { background-color: #c0392b; }
+        button.danger:hover { background-color: #a93226; }
+        .slider-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            font-size: 12px;
+            margin-top: 6px;
+        }
+        input[type="range"] {
+            width: 100%;
+        }
+        .instructions {
+            margin-top: 10px;
+            font-size: 11px;
+            color: #aaa;
+            line-height: 1.4;
         }
     </style>
 </head>
 <body>
 
-    <h1>✨ 美少女 AI 棋陣：Q-Learning 覺醒之路 ✨</h1>
+    <h1>多重 Q-Learning AI 賽車與生存進化模擬器</h1>
 
-    <div id="gameWrapper">
-        <!-- 左側：美少女 AI 狀態與對話面板 -->
-        <div class="side-panel">
-            <div class="panel-box">
-                <div class="panel-title">🌸 當前對手美少女</div>
-                <div class="stat-row"><span id="aiName">艾莉絲 (傲嬌劍士)</span></div>
-                <div id="chatBox">艾莉絲：「哼！區區人類別想輕易贏過本小姐的神經網路！」</div>
+    <div id="mainContainer">
+        <!-- 遊戲畫布 -->
+        <canvas id="simCanvas" width="800" height="550"></canvas>
+
+        <!-- 控制與訓練面板 -->
+        <div id="controlPanel">
+            <div class="panel-section">
+                <h3>📊 模擬狀態數據</h3>
+                <div class="stat-row"><span>目前世代 (Generation):</span> <span id="genVal" class="stat-val">1</span></div>
+                <h3>📊 模擬狀態數據</h3>
+                <div class="stat-row"><span>目前世代 (Generation):</span> <span id="genVal" class="stat-val">1</span></div>
+                <div class="stat-row"><span>存活 AI 數量:</span> <span id="aliveVal" class="stat-val">10/10</span></div>
+                <div class="stat-row"><span>最高生存時間:</span> <span id="maxTimeVal" class="stat-val">0.0s</span></div>
+                <div class="stat-row"><span>大腦記憶狀態 (Q-States):</span> <span id="qStatesVal" class="stat-val">0</span></div>
             </div>
 
-            <div class="panel-box">
-                <div class="panel-title">🧠 Q-Learning 大腦狀態</div>
-                <div class="stat-row"><span>已探索狀態數:</span> <span id="qStatesCount">0</span></div>
-                <div class="stat-row"><span>當前決策策略:</span> <span id="aiActionStr">思考中...</span></div>
-                <div class="stat-row"><span>勝率預估:</span> <span id="winRateStr">50%</span></div>
-            </div>
-
-            <div class="panel-box">
-                <div class="panel-title">🎮 玩家操作區</div>
-                <button class="btn" onclick="playerMove('attack')">⚔️ 強力斬擊</button>
-                <button class="btn" onclick="playerMove('defend')">🛡️ 能量防護</button>
-                <button class="btn" onclick="playerMove('heal')">💚 醫療結晶</button>
-            </div>
-        </div>
-
-        <!-- 中間：遊戲戰鬥畫布 -->
-        <div style="display: flex; flex-direction: column; align-items: center; gap: 10px;">
-            <canvas id="gameCanvas" width="500" height="400"></canvas>
-            <div style="font-size: 13px; color: #aaa;">使用下方訓練面板調整 AI 參數，觀察 AI 如何透過強化學習進化！</div>
-        </div>
-
-        <!-- 右側：AI 訓練與調教面板 -->
-        <div class="side-panel">
-            <div class="panel-box">
-                <div class="panel-title">⚙️ AI 參數調教 (Hyperparameters)</div>
+            <div class="panel-section">
+                <h3>⚙️ AI 訓練超參數</h3>
                 <div class="slider-group">
-                    <label>學習率 Alpha (α): <span id="alphaVal">0.1</span></label>
-                    <input type="range" id="alphaRange" min="0.01" max="0.99" step="0.01" value="0.1" oninput="updateHyperparams()">
+                    <label>學習率 (Alpha): <span id="alphaTxt">0.2</span></label>
+                    <input type="range" id="alphaRange" min="0.05" max="0.9" step="0.05" value="0.2">
                 </div>
                 <div class="slider-group">
-                    <label>折扣因數 Gamma (γ): <span id="gammaVal">0.9</span></label>
-                    <input type="range" id="gammaRange" min="0.1" max="0.99" step="0.05" value="0.9" oninput="updateHyperparams()">
+                    <label>折扣因子 (Gamma): <span id="gammaTxt">0.85</span></label>
+                    <input type="range" id="gammaRange" min="0.5" max="0.99" step="0.01" value="0.85">
                 </div>
                 <div class="slider-group">
-                    <label>探索率 Epsilon (ε): <span id="epsilonVal">0.2</span></label>
-                    <input type="range" id="epsilonRange" min="0.0" max="1.0" step="0.05" value="0.2" oninput="updateHyperparams()">
+                    <label>探索率 (Epsilon): <span id="epsTxt">0.2</span></label>
+                    <input type="range" id="epsRange" min="0.0" max="0.8" step="0.05" value="0.2">
                 </div>
             </div>
 
-            <div class="panel-box">
-                <div class="panel-title">🎖️ 手動獎懲控制 (Shaping)</div>
-                <p style="font-size: 11px; margin: 5px 0;">當 AI 表現好或壞時，手動給予反饋加速其學習：</p>
-                <div style="display: flex; gap: 10px; margin-top: 8px;">
-                    <button class="btn" style="background: #2ecc71; flex: 1;" onclick="manualReward(50)">👍 獎勵</button>
-                    <button class="btn" style="background: #e74c3c; flex: 1;" onclick="manualReward(-50)">👎 懲罰</button>
-                </div>
+            <div class="panel-section">
+                <h3>🛠️ 訓練與資料控制</h3>
+                <button onclick="resetCurrentGeneration()">強制重置本代 AI</button>
+                <button class="secondary" onclick="saveBrainToLocalStorage()">手動儲存 AI 大腦到瀏覽器</button>
+                <button class="danger" onclick="clearAIBrain()">清空所有 AI 記憶 (重頭訓練)</button>
             </div>
 
-            <div class="panel-box">
-                <div class="panel-title">🔄 戰局控制</div>
-                <button class="btn" style="width: 100%; background: #3498db;" onclick="resetMatch()">重新開始對局</button>
+            <div class="instructions">
+                <strong>遊戲規則與 AI 機制：</strong><br>
+                1. 畫面上有 10 個獨立的 Q-Learning AI 賽車。<br>
+                2. AI 會透過前方與兩側的「雷達感測器」偵測障礙物。<br>
+                3. 動作空間：向左轉、向右轉、加速、減速。<br>
+                4. 當 AI 撞到障礙物或牆壁會扣分並重置；成功閃避並向前行駛會獲得獎勵！
             </div>
         </div>
     </div>
 
     <script>
-        const canvas = document.getElementById("gameCanvas");
+        const canvas = document.getElementById("simCanvas");
         const ctx = canvas.getContext("2d");
 
-        // 遊戲與 Q-Learning 核心參數
-        let ALPHA = 0.1;
-        let GAMMA = 0.9;
-        let EPSILON = 0.2;
+        // UI 元素
+        const genValEl = document.getElementById("genVal");
+        const aliveValEl = document.getElementById("aliveVal");
+        const maxTimeValEl = document.getElementById("maxTimeVal");
+        const qStatesValEl = document.getElementById("qStatesVal");
+        const alphaRange = document.getElementById("alphaRange");
+        const gammaRange = document.getElementById("gammaRange");
+        const epsRange = document.getElementById("epsRange");
 
-        let player = { name: "玩家", hp: 100, maxHp: 100, x: 100, y: 200, action: 'idle' };
-        let ai = { 
-            name: "艾莉絲", hp: 100, maxHp: 100, x: 400, y: 200, action: 'idle',
-            dialogues: {
-                intro: "哼！區區人類別想輕易贏過本小姐！",
-                win: "哼，早就告訴過你本小姐是無敵的！",
-                lose: "怎、怎麼可能...我的演算法竟然輸了！？",
-                smart: "我已經摸透你的出招習慣了哦～"
+        // 參數變數
+        let ALPHA = parseFloat(alphaRange.value);
+        let GAMMA = parseFloat(gammaRange.value);
+        let EPSILON = parseFloat(epsRange.value);
+
+        alphaRange.oninput = (e) => { ALPHA = parseFloat(e.target.value); document.getElementById("alphaTxt").innerText = ALPHA; };
+        gammaRange.oninput = (e) => { GAMMA = parseFloat(e.target.value); document.getElementById("gammaTxt").innerText = GAMMA; };
+        epsRange.oninput = (e) => { EPSILON = parseFloat(e.target.value); document.getElementById("epsTxt").innerText = EPSILON; };
+
+        // Q-Table 載入與儲存
+        let qTable = JSON.parse(localStorage.getItem("multi_ai_q_table")) || {};
+
+        function saveBrainToLocalStorage() {
+            localStorage.setItem("multi_ai_q_table", JSON.stringify(qTable));
+            alert("✅ AI 大腦記憶已成功儲存至瀏覽器！");
+        }
+
+        function clearAIBrain() {
+            if (confirm("⚠️ 確定要清空所有 AI 的學習記憶嗎？這將無法復原！")) {
+                qTable = {};
+                localStorage.removeItem("multi_ai_q_table");
+                generation = 1;
+                initSimulation();
+                alert("🗑️ AI 大腦已重設為空白。");
             }
-        };
-
-        // 從 LocalStorage 載入 Q-Table，若無則初始化
-        let qTable = JSON.parse(localStorage.getItem('beauty_ai_q_table')) || {};
-        const ACTIONS = ['attack', 'defend', 'heal', 'charge'];
-
-        let gameState = 'player_turn'; // player_turn, ai_turn, game_over
-        let turnCount = 0;
-        let lastStateStr = null;
-        let lastActionStr = null;
-
-        function updateHyperparams() {
-            ALPHA = parseFloat(document.getElementById('alphaRange').value);
-            GAMMA = parseFloat(document.getElementById('gammaRange').value);
-            EPSILON = parseFloat(document.getElementById('epsilonRange').value);
-            document.getElementById('alphaVal').innerText = ALPHA;
-            document.getElementById('gammaVal').innerText = GAMMA;
-            document.getElementById('epsilonVal').innerText = EPSILON;
         }
 
-        function setAiChat(text) {
-            document.getElementById('chatBox').innerText = `${ai.name}：「${text}」`;
-        }
+        // 賽道與障礙物設定
+        const TRACK_START_X = 80;
+        const TRACK_START_Y = 480;
+        let obstacles = [
+            { x: 250, y: 350, w: 60, h: 60 },
+            { x: 450, y: 250, w: 80, h: 50 },
+            { x: 300, y: 120, w: 50, h: 90 },
+            { x: 600, y: 380, w: 70, h: 70 },
+            { x: 180, y: 200, w: 60, h: 60 }
+        ];
 
-        // 取得當前狀態特徵字串 (State Representation)
-        function getStateKey() {
-            let hpDiff = ai.hp - player.hp;
-            let hpState = hpDiff > 20 ? 'advantage' : (hpDiff < -20 ? 'disadvantage' : 'even');
-            let myHpState = ai.hp < 40 ? 'low' : 'high';
-            return `${hpState}_${myHpState}`;
-        }
+        // 世代與 AI 集合
+        let generation = 1;
+        let maxSurvivalTime = 0;
+        const NUM_AGENTS = 12;
+        let agents = [];
 
-        // Q-Learning: 選擇動作 (Epsilon-Greedy)
-        function chooseAiAction(state) {
-            if (!qTable[state]) {
-                qTable[state] = {};
-                ACTIONS.forEach(a => qTable[state][a] = 0.0);
+        // 動作定義: 0: 往左轉, 1: 往右轉, 2: 加速, 3: 減速
+        const ACTIONS = [0, 1, 2, 3];
+
+        class AIAgent {
+            constructor() {
+                this.reset();
             }
 
-            if (Math.random() < EPSILON) {
-                return ACTIONS[Math.floor(Math.random() * ACTIONS.length)];
-            } else {
-                let bestAction = ACTIONS[0];
-                let maxQ = -Infinity;
-                for (let act of ACTIONS) {
-                    if (qTable[state][act] > maxQ) {
-                        maxQ = qTable[state][act];
-                        bestAction = act;
+            reset() {
+                this.x = TRACK_START_X;
+                this.y = TRACK_START_Y;
+                this.angle = -Math.PI / 2; // 朝上
+                this.speed = 2.0;
+                this.maxSpeed = 5.0;
+                this.minSpeed = 1.0;
+                this.radius = 12;
+                this.isAlive = true;
+                this.score = 0;
+                this.survivalTime = 0;
+                this.color = `hsl(${Math.random() * 360}, 80%, 60%)`;
+
+                // Q-Learning 記錄上一步
+                this.lastStateKey = null;
+                this.lastAction = null;
+            }
+
+            // 感測器：發射 3 道雷達 (左前方、正前方、右前方)
+            getSensors() {
+                let rayAngles = [-Math.PI / 4, 0, Math.PI / 4];
+                let readings = [];
+
+                for (let ra of rayAngles) {
+                    let testAngle = this.angle + ra;
+                    let dist = 0;
+                    let maxDist = 120;
+                    let hit = false;
+
+                    for (let d = 5; d <= maxDist; d += 5) {
+                        let cx = this.x + Math.cos(testAngle) * d;
+                        let cy = this.y + Math.sin(testAngle) * d;
+
+                        // 檢查牆壁邊界
+                        if (cx < 20 || cx > canvas.width - 20 || cy < 20 || cy > canvas.height - 20) {
+                            dist = d;
+                            hit = true;
+                            break;
+                        }
+
+                        // 檢查障礙物
+                        let hitObs = false;
+                        for (let obs of obstacles) {
+                            if (cx >= obs.x && cx <= obs.x + obs.w && cy >= obs.y && cy <= obs.y + obs.h) {
+                                hitObs = true;
+                                break;
+                            }
+                        }
+                        if (hitObs) {
+                            dist = d;
+                            hit = true;
+                            break;
+                        }
+                    }
+                    if (!hit) dist = maxDist;
+                    // 將距離離散化為 3 個等級: 0: 很近, 1: 中等, 2: 安全遠
+                    if (dist < 35) readings.push(0);
+                    else if (dist < 75) readings.push(1);
+                    else readings.push(2);
+                }
+                return readings; // 回傳類似 [0, 2, 1] 的狀態陣列
+            }
+
+            getStateKey() {
+                let sensors = this.getSensors();
+                let speedState = this.speed > 3.5 ? 2 : (this.speed > 2 ? 1 : 0);
+                return `${sensors[0]}_${sensors[1]}_${sensors[2]}_${speedState}`;
+            }
+
+            chooseAction(stateKey) {
+                if (!qTable[stateKey]) {
+                    qTable[stateKey] = { 0: 0, 1: 0, 2: 0, 3: 0 };
+                }
+
+                // Epsilon-greedy 策略
+                if (Math.random() < EPSILON) {
+                    return ACTIONS[Math.floor(Math.random() * ACTIONS.length)];
+                } else {
+                    let actions = qTable[stateKey];
+                    let bestAction = 0;
+                    let maxVal = -999999;
+                    for (let a of ACTIONS) {
+                        if (actions[a] > maxVal) {
+                            maxVal = actions[a];
+                            bestAction = a;
+                        }
+                    }
+                    return bestAction;
+                }
+            }
+
+            update() {
+                if (!this.isAlive) return;
+
+                this.survivalTime += 1 / 60;
+
+                // 取得目前狀態
+                let stateKey = this.getStateKey();
+                let action = this.chooseAction(stateKey);
+
+                // 執行動作
+                if (action === 0) this.angle -= 0.06; // 左轉
+                else if (action === 1) this.angle += 0.06; // 右轉
+                else if (action === 2) this.speed = Math.min(this.maxSpeed, this.speed + 0.1); // 加速
+                else if (action === 3) this.speed = Math.max(this.minSpeed, this.speed - 0.1); // 減速
+
+                // 移動位置
+                this.x += Math.cos(this.angle) * this.speed;
+                this.y += Math.sin(this.angle) * this.speed;
+
+                // 獎勵計算與碰撞偵測
+                let reward = 0;
+                let collided = false;
+
+                // 1. 邊界碰撞
+                if (this.x < this.radius || this.x > canvas.width - this.radius || 
+                    this.y < this.radius || this.y > canvas.height - this.radius) {
+                    collided = true;
+                }
+
+                // 2. 障礙物碰撞
+                for (let obs of obstacles) {
+                    if (this.x + this.radius > obs.x && this.x - this.radius < obs.x + obs.w &&
+                        this.y + this.radius > obs.y && this.y - this.radius < obs.y + obs.h) {
+                        collided = true;
+                        break;
                     }
                 }
-                return bestAction;
+
+                if (collided) {
+                    this.isAlive = false;
+                    reward = -100; // 碰撞懲罰
+                } else {
+                    reward = 1.2 + (this.speed * 0.2); // 存活且順利行駛給予獎勵
+                }
+
+                // Q-Learning 更新 Q-Value
+                let nextStateKey = this.getStateKey();
+                if (this.lastStateKey !== null && this.lastAction !== null) {
+                    if (!qTable[this.lastStateKey]) qTable[this.lastStateKey] = { 0: 0, 1: 0, 2: 0, 3: 0 };
+                    if (!qTable[nextStateKey]) qTable[nextStateKey] = { 0: 0, 1: 0, 2: 0, 3: 0 };
+
+                    let oldQ = qTable[this.lastStateKey][this.lastAction];
+                    let nextMaxQ = Math.max(...Object.values(qTable[nextStateKey]));
+
+                    // Q-Learning 公式
+                    qTable[this.lastStateKey][this.lastAction] = oldQ + ALPHA * (reward + GAMMA * nextMaxQ - oldQ);
+                }
+
+                this.lastStateKey = stateKey;
+                this.lastAction = action;
+            }
+
+            draw() {
+                if (!this.isAlive) return;
+
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.angle);
+
+                // 繪製車身
+                ctx.fillStyle = this.color;
+                ctx.fillRect(-10, -6, 20, 12);
+                ctx.fillStyle = "#fff";
+                ctx.fillRect(2, -4, 4, 8); // 車頭
+
+                ctx.restore();
             }
         }
 
-        // Q-Learning: 更新 Q 值
-        function updateQ(state, action, reward, nextState) {
-            if (!qTable[state]) qTable[state] = { attack: 0, defend: 0, heal: 0, charge: 0 };
-            if (!qTable[nextState]) qTable[nextState] = { attack: 0, defend: 0, heal: 0, charge: 0 };
-
-            let oldQ = qTable[state][action];
-            let maxNextQ = Math.max(...Object.values(qTable[nextState]));
-            
-            // Q-learning 公式更新
-            qTable[state][action] = oldQ + ALPHA * (reward + GAMMA * maxNextQ - oldQ);
-            localStorage.setItem('beauty_ai_q_table', JSON.stringify(qTable));
-            updateUIStats();
-        }
-
-        function updateUIStats() {
-            let totalStates = Object.keys(qTable).length;
-            document.getElementById('qStatesCount').innerText = totalStates;
-        }
-
-        function playerMove(actionType) {
-            if (gameState !== 'player_turn') return;
-
-            // 玩家行動結算
-            let dmgToAi = 0;
-            if (actionType === 'attack') {
-                dmgToAi = Math.floor(Math.random() * 15) + 15;
-                ai.hp = Math.max(0, ai.hp - dmgToAi);
-                player.action = 'attack';
-            } else if (actionType === 'defend') {
-                player.action = 'defend';
-                setAiChat("哼，防禦力加高了嗎？但我可不怕！");
-            } else if (actionType === 'heal') {
-                player.hp = Math.min(player.maxHp, player.hp + 20);
-                player.action = 'heal';
-            }
-
-            checkGameOver();
-            if (gameState === 'game_over') return;
-
-            gameState = 'ai_turn';
-            setTimeout(aiTurn, 800);
-        }
-
-        function aiTurn() {
-            let currentState = getStateKey();
-            let action = chooseAiAction(currentState);
-
-            lastStateStr = currentState;
-            lastActionStr = action;
-
-            let reward = 0;
-            let aiDmg = 0;
-
-            if (action === 'attack') {
-                aiDmg = Math.floor(Math.random() * 15) + 12;
-                player.hp = Math.max(0, player.hp - aiDmg);
-                ai.action = 'attack';
-                reward += 10; // 攻擊給予正向獎勵
-                setAiChat("接招吧！這是本小姐的連續斬擊！");
-            } else if (action === 'defend') {
-                ai.action = 'defend';
-                reward += 2;
-                setAiChat("看穿你的動向了，防禦！");
-            } else if (action === 'heal') {
-                ai.hp = Math.min(ai.maxHp, ai.hp + 25);
-                ai.action = 'heal';
-                reward += (ai.hp < 50) ? 15 : 2; // 殘血補血獎勵更高
-                setAiChat("微光結晶，修復我的裝甲！");
-            } else if (action === 'charge') {
-                ai.action = 'charge';
-                reward += 5;
-                setAiChat("能量聚集中，準備迎接審判吧！");
-            }
-
-            document.getElementById('aiActionStr').innerText = `選擇動作: ${action}`;
-
-            let nextState = getStateKey();
-            updateQ(currentState, action, reward, nextState);
-
-            checkGameOver();
-            if (gameState !== 'game_over') {
-                gameState = 'player_turn';
+        function initSimulation() {
+            agents = [];
+            for (let i = 0; i < NUM_AGENTS; i++) {
+                agents.push(new AIAgent());
             }
         }
 
-        function manualReward(val) {
-            if (!lastStateStr || !lastActionStr) return;
-            updateQ(lastStateStr, lastActionStr, val, getStateKey());
-            setAiChat(val > 0 ? "謝謝您的肯定！我的神經網路升級了！嗚嗚..." : "哼！竟然懲罰我...我會記取教訓的！");
+        function resetCurrentGeneration() {
+            generation++;
+            initSimulation();
         }
 
-        function checkGameOver() {
-            if (ai.hp <= 0) {
-                gameState = 'game_over';
-                setAiChat(ai.dialogues.lose);
-                updateQ(lastStateStr, lastActionStr, -50, getStateKey()); // 失敗懲罰
-            } else if (player.hp <= 0) {
-                gameState = 'game_over';
-                setAiChat(ai.dialogues.win);
-                updateQ(lastStateStr, lastActionStr, 50, getStateKey()); // 勝利獎勵
+        // 初始化
+        initSimulation();
+
+        // 主遊戲迴圈
+        function gameLoop() {
+            // 1. 更新邏輯
+            let aliveCount = 0;
+            for (let agent of agents) {
+                if (agent.isAlive) {
+                    agent.update();
+                    aliveCount++;
+                    if (agent.survivalTime > maxSurvivalTime) {
+                        maxSurvivalTime = agent.survivalTime;
+                    }
+                }
             }
-        }
 
-        function resetMatch() {
-            player.hp = 100;
-            ai.hp = 100;
-            gameState = 'player_turn';
-            setAiChat(ai.dialogues.intro);
-            document.getElementById('aiActionStr').innerText = '準備中...';
-        }
+            // 如果全部 AI 都死掉了，自動進入下一代
+            if (aliveCount === 0) {
+                generation++;
+                initSimulation();
+            }
 
-        // 渲染遊戲畫面與美少女動態立繪
-        function render() {
+            // 更新 UI 數據
+            genValEl.innerText = generation;
+            aliveValEl.innerText = `${aliveCount}/${NUM_AGENTS}`;
+            maxTimeValEl.innerText = `${maxSurvivalTime.toFixed(1)}s`;
+            qStatesValEl.innerText = Object.keys(qTable).length;
+
+            // 2. 畫面渲染
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // 繪製戰場背景格線
-            ctx.strokeStyle = 'rgba(255, 42, 133, 0.1)';
-            ctx.lineWidth = 1;
-            for (let i = 0; i < canvas.width; i += 40) {
-                ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, canvas.height); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(canvas.width, i); ctx.stroke();
+            // 繪製賽道外框與起點
+            ctx.strokeStyle = "#444";
+            ctx.lineWidth = 4;
+            ctx.strokeRect(10, 10, canvas.width - 20, canvas.height - 20);
+
+            // 繪製起點標記
+            ctx.fillStyle = "rgba(46, 204, 113, 0.3)";
+            ctx.fillRect(TRACK_START_X - 25, TRACK_START_Y - 40, 50, 80);
+            ctx.fillStyle = "#2ecc71";
+            ctx.font = "12px sans-serif";
+            ctx.fillText("START", TRACK_START_X - 18, TRACK_START_Y + 45);
+
+            // 繪製障礙物
+            ctx.fillStyle = "#e74c3c";
+            for (let obs of obstacles) {
+                ctx.fillRect(obs.x, obs.y, obs.w, obs.h);
+                ctx.strokeStyle = "#c0392b";
+                ctx.lineWidth = 2;
+                ctx.strokeRect(obs.x, obs.y, obs.w, obs.h);
             }
 
-            // 繪製玩家 (左側藍色光點/角色)
-            ctx.fillStyle = '#00f0ff';
-            ctx.beginPath();
-            ctx.arc(player.x, player.y, 35, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.strokeStyle = '#fff';
-            ctx.lineWidth = 3;
-            ctx.stroke();
+            // 繪製所有 AI 賽車
+            for (let agent of agents) {
+                agent.draw();
+            }
 
-            // 繪製美少女 AI (右側粉色動態角色)
-            ctx.fillStyle = '#ff2a85';
-            ctx.beginPath();
-            ctx.arc(ai.x, ai.y + Math.sin(Date.now() / 300) * 5, 38, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.strokeStyle = '#00f0ff';
-            ctx.lineWidth = 3;
-            ctx.stroke();
-
-            // 繪製血條
-            drawBar(80, 50, 120, 14, player.hp, player.maxHp, '#00f0ff', '玩家');
-            drawBar(300, 50, 120, 14, ai.hp, ai.maxHp, '#ff2a85', ai.name);
-
-            requestAnimationFrame(render);
+            requestAnimationFrame(gameLoop);
         }
 
-        function drawBar(x, y, w, h, cur, max, color, label) {
-            ctx.fillStyle = '#222';
-            ctx.fillRect(x, y, w, h);
-            ctx.fillStyle = color;
-            ctx.fillRect(x, y, (cur / max) * w, h);
-            ctx.strokeStyle = '#fff';
-            ctx.strokeRect(x, y, w, h);
-            ctx.fillStyle = '#fff';
-            ctx.font = '11px sans-serif';
-            ctx.fillText(`${label}: ${Math.max(0, cur)}/${max}`, x, y - 5);
-        }
-
-        // 啟動渲染循環
-        updateUIStats();
-        render();
+        // 啟動迴圈
+        requestAnimationFrame(gameLoop);
     </script>
 </body>
 </html>
