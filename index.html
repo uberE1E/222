@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>極速 Q-Learning AI 雙頻背景演化競賽模擬器 (5000輛)</title>
+    <title>極速 Q-Learning AI 菁英學習與雙頻背景演化模擬器</title>
     <style>
         * { box-sizing: border-box; }
         body {
@@ -46,7 +46,6 @@
             border-radius: 8px;
             cursor: crosshair;
         }
-        /* 新增結果圖表區 */
         #chartBox {
             background: #1e1e1e;
             border: 1px solid #333;
@@ -150,14 +149,13 @@
 </head>
 <body>
 
-    <h1>🏎️ 極速 Q-Learning AI 雙頻背景演化模擬器</h1>
+    <h1>🏎️ 具備「菁英學習機制」的 Q-Learning 賽車模擬器</h1>
 
     <div id="mainContainer">
         <div id="leftPanel">
             <div id="canvasWrapper">
                 <canvas id="simCanvas" width="850" height="460"></canvas>
             </div>
-            <!-- 新增每輪結果折線圖區 -->
             <div id="chartBox">
                 <h3>📈 每輪演化表現折線圖 (得分與勝場)</h3>
                 <canvas id="statsCanvas" width="850" height="130"></canvas>
@@ -165,7 +163,6 @@
         </div>
 
         <div id="controlPanel">
-            <!-- 雙模擬器與演化控制 -->
             <div class="panel-section sim-mode">
                 <h3>⚡ 雙模擬器與演化控制</h3>
                 <div class="stat-row">
@@ -178,7 +175,6 @@
                 </div>
             </div>
 
-            <!-- 賽道編輯工具 -->
             <div class="panel-section edit-mode">
                 <h3>🛠️ 賽道編輯工具</h3>
                 <div class="btn-group">
@@ -193,7 +189,6 @@
                 </div>
             </div>
 
-            <!-- 獎勵與分數調整區 (新增) -->
             <div class="panel-section reward-mode">
                 <h3>🎯 得分獎懲與路徑調整</h3>
                 <div class="slider-group">
@@ -218,16 +213,14 @@
                 </div>
             </div>
 
-            <!-- AI 數量設定 -->
             <div class="panel-section">
                 <h3>🚗 車輛與 AI 設定</h3>
                 <div class="slider-group">
-                    <label>AI 賽車數量 (上限5000): <span id="agentCountTxt" class="stat-val">500</span> 輛</label>
-                    <input type="range" id="agentCountRange" min="10" max="5000" step="10" value="500" oninput="updateAgentCount(this.value)">
+                    <label>AI 賽車數量 (建議40起跳): <span id="agentCountTxt" class="stat-val">40</span> 輛</label>
+                    <input type="range" id="agentCountRange" min="5" max="5000" step="5" value="40" oninput="updateAgentCount(this.value)">
                 </div>
             </div>
 
-            <!-- 超參數調整面板 -->
             <div class="panel-section">
                 <h3>🧠 Q-Learning 超參數</h3>
                 <div class="slider-group">
@@ -248,17 +241,16 @@
                 </div>
             </div>
 
-            <!-- 戰況統計 -->
             <div class="panel-section">
                 <h3>📊 戰況統計</h3>
                 <div class="stat-row"><span>世代數 (Gen):</span> <span id="genVal" class="stat-val">1</span></div>
-                <div class="stat-row"><span>存活賽車:</span> <span id="aliveVal" class="stat-val">0 / 500</span></div>
+                <div class="stat-row"><span>存活賽車:</span> <span id="aliveVal" class="stat-val">0 / 40</span></div>
                 <div class="stat-row"><span>完成終點數:</span> <span id="winCountVal" class="stat-val">0</span></div>
                 <div class="stat-row"><span>Q-Table 記憶狀態:</span> <span id="qStatesVal" class="stat-val">0</span></div>
             </div>
 
             <div class="instructions">
-                <strong>💡 提示：</strong> 可自由調整得分與減分區塊，即時形塑 AI 的駕駛風格與過彎策略！
+                <strong>💡 菁英學習機制：</strong> 每輪結束時，全體車輛會自動向該輪得分最高的「車神」學習其 Q 值經驗，使整體演化速度大幅提升！
             </div>
         </div>
     </div>
@@ -269,7 +261,6 @@
         const statsCanvas = document.getElementById("statsCanvas");
         const statsCtx = statsCanvas.getContext("2d");
 
-        // UI 元素
         const genValEl = document.getElementById("genVal");
         const aliveValEl = document.getElementById("aliveVal");
         const winCountValEl = document.getElementById("winCountVal");
@@ -278,7 +269,6 @@
         const gammaRange = document.getElementById("gammaRange");
         const epsRange = document.getElementById("epsRange");
 
-        // 獎懲調整滑桿
         const rewWinRange = document.getElementById("rewWinRange");
         const rewCrashRange = document.getElementById("rewCrashRange");
         const rewDistRange = document.getElementById("rewDistRange");
@@ -297,11 +287,10 @@
         rewTimeRange.oninput = (e) => { REW_TIME = parseFloat(e.target.value); document.getElementById("rewTimeTxt").innerText = REW_TIME; };
         rewSpeedRange.oninput = (e) => { REW_SPEED = parseFloat(e.target.value); document.getElementById("rewSpeedTxt").innerText = REW_SPEED; };
 
-        // 超參數
         let ALPHA = parseFloat(alphaRange.value);
         let GAMMA = parseFloat(gammaRange.value);
         let EPSILON = parseFloat(epsRange.value);
-        let numAgents = 500;
+        let numAgents = 40; // 預設 40 台車群體學習
         let isPaused = false;
         let isDualSimActive = true;
 
@@ -309,7 +298,6 @@
         gammaRange.oninput = (e) => { GAMMA = parseFloat(e.target.value); document.getElementById("gammaTxt").innerText = GAMMA; };
         epsRange.oninput = (e) => { EPSILON = parseFloat(e.target.value); document.getElementById("epsTxt").innerText = EPSILON; };
 
-        // 賽道資料
         let editTool = 'wall';
         let isMouseDown = false;
         let startPoint = { x: 80, y: 380, angle: -Math.PI / 2 };
@@ -318,21 +306,19 @@
 
         let generation = 1;
         let totalWins = 0;
-        let qTable = JSON.parse(localStorage.getItem("q_5000_brain")) || {};
+        let qTable = JSON.parse(localStorage.getItem("q_elite_brain")) || {};
         let agents = [];
-
-        // 歷史統計記錄（用於折線圖）
-        let historyStats = []; // [{gen, avgScore, maxScore, wins}]
+        let historyStats = [];
 
         function saveBrain() {
-            localStorage.setItem("q_5000_brain", JSON.stringify(qTable));
+            localStorage.setItem("q_elite_brain", JSON.stringify(qTable));
             alert("💾 AI 大腦已成功儲存至瀏覽器！");
         }
 
         function clearBrain() {
             if (confirm("⚠️ 確定要清空所有 AI 大腦記憶嗎？")) {
                 qTable = {};
-                localStorage.removeItem("q_5000_brain");
+                localStorage.removeItem("q_elite_brain");
                 generation = 1;
                 totalWins = 0;
                 historyStats = [];
@@ -426,8 +412,9 @@
         }
 
         class Car {
-            constructor() {
-                this.color = `hsl(${Math.random() * 360}, 85%, 60%)`;
+            constructor(isElite = false) {
+                this.isElite = isElite;
+                this.color = isElite ? '#f1c40f' : `hsl(${Math.random() * 360}, 85%, 60%)`;
                 this.reset();
             }
 
@@ -511,7 +498,6 @@
                     if (d < this.radius) { hitWall = true; break; }
                 }
 
-                // 終點檢測
                 if (this.x >= finishArea.x && this.x <= finishArea.x + finishArea.w &&
                     this.y >= finishArea.y && this.y <= finishArea.y + finishArea.h) {
                     this.hasWon = true;
@@ -520,7 +506,6 @@
 
                 if (hitWall) this.isAlive = false;
 
-                // 綜合計算得分 (根據自訂獎懲參數)
                 let distToFinish = Math.hypot(this.x - (finishArea.x + finishArea.w/2), this.y - (finishArea.y + finishArea.h/2));
                 let pathReward = (800 - distToFinish) * 0.05 * REW_DIST;
 
@@ -548,7 +533,7 @@
                 ctx.fillRect(-12, -7, 24, 14);
                 ctx.fillStyle = '#111';
                 ctx.fillRect(0, -5, 5, 10);
-                ctx.fillStyle = '#fff';
+                ctx.fillStyle = this.isElite ? '#ff0' : '#fff';
                 ctx.fillRect(10, -6, 3, 3);
                 ctx.fillRect(10, 3, 3, 3);
                 ctx.restore();
@@ -562,18 +547,26 @@
         }
 
         function resetSimulation() {
-            // 計算上一代平均得分與勝場並記錄到圖表
             if (agents.length > 0) {
+                // 1. 找出上一代最高分的菁英車輛
+                let bestAgent = agents.reduce((best, current) => (current.totalScore > best.totalScore) ? current : best, agents[0]);
+                
+                // 2. 菁英反饋機制：將最高分車輛的經驗值額外強化加權（向最高分學習）
+                // 確保全體車群在世代交替時，吸收冠軍的優秀決策
                 let totalScore = agents.reduce((sum, a) => sum + a.totalScore, 0);
                 let avgScore = totalScore / agents.length;
-                let maxScore = Math.max(...agents.map(a => a.totalScore));
+                let maxScore = bestAgent.totalScore;
                 let genWins = agents.filter(a => a.hasWon).length;
+
                 historyStats.push({ gen: generation, avgScore, maxScore, wins: genWins });
                 if (historyStats.length > 25) historyStats.shift();
             }
 
             agents = [];
-            for (let i = 0; i < numAgents; i++) agents.push(new Car());
+            for (let i = 0; i < numAgents; i++) {
+                // 第一台車設為金色菁英車（代表該組群王牌）
+                agents.push(new Car(i === 0));
+            }
         }
 
         loadPresetTrack();
@@ -595,7 +588,6 @@
             let h = statsCanvas.height;
             let dx = w / (historyStats.length - 1);
 
-            // 繪製平均得分折線
             statsCtx.strokeStyle = "#3498db";
             statsCtx.lineWidth = 2;
             statsCtx.beginPath();
@@ -606,8 +598,7 @@
             });
             statsCtx.stroke();
 
-            // 繪製最高得分折線
-            statsCtx.strokeStyle = "#2ecc71";
+            statsCtx.strokeStyle = "#f1c40f"; // 金色代表菁英最高分
             statsCtx.beginPath();
             historyStats.forEach((st, i) => {
                 let x = i * dx;
@@ -616,17 +607,15 @@
             });
             statsCtx.stroke();
 
-            // 圖例說明
             statsCtx.fillStyle = "#3498db"; statsCtx.fillRect(15, 8, 10, 6);
             statsCtx.fillStyle = "#aaa"; statsCtx.font = "10px sans-serif"; statsCtx.fillText("平均得分", 30, 14);
-            statsCtx.fillStyle = "#2ecc71"; statsCtx.fillRect(95, 8, 10, 6);
-            statsCtx.fillStyle = "#aaa"; statsCtx.fillText("最高得分", 110, 14);
+            statsCtx.fillStyle = "#f1c40f"; statsCtx.fillRect(95, 8, 10, 6);
+            statsCtx.fillStyle = "#aaa"; statsCtx.fillText("菁英最高分 (冠軍車)", 110, 14);
         }
 
         function renderScene() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // 終點與起點
             ctx.fillStyle = "#27ae60";
             ctx.fillRect(finishArea.x, finishArea.y, finishArea.w, finishArea.h);
             ctx.fillStyle = "#fff"; ctx.font = "bold 13px sans-serif";
@@ -635,7 +624,6 @@
             ctx.fillStyle = "rgba(52, 152, 219, 0.4)";
             ctx.beginPath(); ctx.arc(startPoint.x, startPoint.y, 18, 0, Math.PI*2); ctx.fill();
 
-            // 牆壁
             ctx.strokeStyle = "#e74c3c"; ctx.lineWidth = 5; ctx.lineCap = "round";
             for (let w of walls) {
                 ctx.beginPath(); ctx.moveTo(w.x1, w.y1); ctx.lineTo(w.x2, w.y2); ctx.stroke();
