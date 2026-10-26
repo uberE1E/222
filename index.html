@@ -1,332 +1,838 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OpenAI 3D 躲貓貓 AI 模擬器 (Multi-Agent Hide and Seek)</title>
+    <title>AI Learns to Drive on Pipes - 3D Simulation</title>
+    <!-- Tailwind CSS for UI Layout -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Three.js Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- OrbitControls for camera manipulation -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
     <style>
-        * { box-sizing: border-box; }
         body {
             margin: 0;
-            background-color: #0b0f19;
-            color: #f0f4f8;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
             overflow: hidden;
+            background-color: #030712;
+            color: #f3f4f6;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
             user-select: none;
         }
-        h1 {
-            margin: 4px 0;
-            font-size: 20px;
-            color: #38bdf8;
-            text-shadow: 0 0 10px rgba(56, 189, 248, 0.4);
+        canvas {
+            display: block;
         }
-        .subtitle {
-            font-size: 11px;
-            color: #94a3b8;
-            margin-bottom: 6px;
+        /* Custom scrollbar for control panel */
+        ::-webkit-scrollbar {
+            width: 6px;
         }
-        #mainContainer {
-            display: flex;
-            gap: 12px;
-            align-items: flex-start;
+        ::-webkit-scrollbar-track {
+            background: #111827;
         }
-        #canvasContainer {
-            position: relative;
-            border: 3px solid #1e293b;
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+        ::-webkit-scrollbar-thumb {
+            background: #374151;
+            border-radius: 3px;
         }
-        #controlPanel {
-            width: 280px;
-            background: #1e293b;
-            border: 1px solid #334155;
-            border-radius: 8px;
-            padding: 12px;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
-        }
-        .panel-section {
-            background: #0f172a;
-            padding: 8px 10px;
-            border-radius: 6px;
-            border-left: 4px solid #38bdf8;
-        }
-        .panel-section h3 {
-            margin: 0 0 6px 0;
-            font-size: 13px;
-            color: #fff;
-            display: flex;
-            justify-content: space-between;
-        }
-        .stat-row {
-            display: flex;
-            justify-content: space-between;
-            font-size: 11px;
-            margin-bottom: 3px;
-            color: #cbd5e1;
-        }
-        .stat-val { font-weight: bold; color: #10b981; }
-        button {
-            background-color: #0284c7;
-            color: white;
-            border: none;
-            padding: 6px 10px;
-            border-radius: 4px;
-            font-size: 11px;
-            font-weight: bold;
-            cursor: pointer;
-            width: 100%;
-            margin-top: 4px;
-            transition: all 0.2s;
-        }
-        button:hover { background-color: #0369a1; }
-        button.secondary { background-color: #475569; }
-        button.secondary:hover { background-color: #64748b; }
-        .instructions {
-            font-size: 10px;
-            color: #94a3b8;
-            line-height: 1.4;
-            background: #0f172a;
-            padding: 8px;
-            border-radius: 4px;
+        ::-webkit-scrollbar-thumb:hover {
+            background: #4b5563;
         }
     </style>
-    <!-- 引入 Three.js 3D 渲染庫 -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
-<body>
+<body class="relative w-screen h-screen overflow-hidden">
 
-    <h1>🤖 OpenAI 3D 躲貓貓 AI 模擬器</h1>
-    <div class="subtitle">模擬多代理智慧體 (Multi-Agent) 學習築牆防禦與搜尋對抗</div>
+    <!-- 3D Canvas Container -->
+    <div id="canvasContainer" class="absolute inset-0 w-full h-full z-0"></div>
 
-    <div id="mainContainer">
-        <div id="canvasContainer"></div>
+    <!-- UI Overlay Header -->
+    <div class="absolute top-4 left-4 z-10 pointer-events-none">
+        <h1 class="text-2xl font-black tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-sky-400 to-indigo-500 drop-shadow-[0_0_15px_rgba(56,189,248,0.5)]">
+            🏎️ TRACKMANIA 3D PIPE AI
+        </h1>
+        <p class="text-xs text-gray-400 font-medium tracking-wide">
+            Inspired by Yosh's <span class="text-cyan-400">"AI Learns to Drive on Pipes"</span> • Reinforcement Learning (Q-Learning)
+        </p>
+    </div>
 
-        <div id="controlPanel">
-            <div class="panel-section">
-                <h3>🎮 模擬器控制</h3>
-                <button onclick="resetSimulation()">🔄 重新開始模擬</button>
-                <button class="secondary" onclick="togglePause()">⏸️ 暫停 / 播放</button>
-            </div>
-
-            <div class="panel-section">
-                <h3>📊 3D 戰況統計</h3>
-                <div class="stat-row"><span>模擬回合 (Round):</span> <span id="roundVal" class="stat-val">1</span></div>
-                <div class="stat-row"><span>躲藏者 (Hiders):</span> <span id="hiderVal" class="stat-val">3 (藍色)</span></div>
-                <div class="stat-row"><span>尋找者 (Seekers):</span> <span id="seekerVal" class="stat-val">2 (紅色)</span></div>
-                <div class="stat-row"><span>箱子/障礙物:</span> <span id="boxVal" class="stat-val">4</span></div>
-            </div>
-
-            <div class="instructions">
-                <strong>🕹️ 3D 視角操作：</strong><br>
-                • 模擬器會自動從上帝視角觀看 3D 競技場。<br>
-                • <strong>藍色方（Hiders）</strong>會自動移動並推動箱子圍成防禦基地。<br>
-                • <strong>紅色方（Seekers）</strong>會尋找突破口追捕藍色方。
-            </div>
+    <!-- HUD Overlay for Active Leading Car -->
+    <div id="hudBox" class="absolute top-4 left-1/2 -translate-x-1/2 z-10 bg-gray-900/80 backdrop-blur-md border border-cyan-500/30 rounded-xl px-5 py-2 flex items-center gap-6 shadow-[0_0_20px_rgba(0,0,0,0.6)]">
+        <div class="text-center">
+            <div class="text-[10px] text-gray-400 uppercase tracking-widest font-bold">Leading Car Speed</div>
+            <div id="hudSpeed" class="text-lg font-black text-cyan-400">0 km/h</div>
+        </div>
+        <div class="w-px h-8 bg-gray-700/60"></div>
+        <div class="text-center">
+            <div class="text-[10px] text-gray-400 uppercase tracking-widest font-bold">Distance Progress</div>
+            <div id="hudDist" class="text-lg font-black text-emerald-400">0.0m</div>
+        </div>
+        <div class="w-px h-8 bg-gray-700/60"></div>
+        <div class="text-center">
+            <div class="text-[10px] text-gray-400 uppercase tracking-widest font-bold">Active Cars</div>
+            <div id="hudCars" class="text-lg font-black text-amber-400">0 / 0</div>
         </div>
     </div>
 
-    <script>
-        let scene, camera, renderer;
-        let hiders = [], seekers = [], boxes = [], walls = [];
-        let isPaused = false;
-        let roundCount = 1;
+    <!-- Main Control Panel (Right Side) -->
+    <div class="absolute top-4 right-4 bottom-4 w-80 z-10 bg-gray-950/85 backdrop-blur-xl border border-gray-800 rounded-2xl p-4 flex flex-col gap-4 shadow-2xl overflow-y-auto">
+        
+        <!-- Simulation Acceleration & Status -->
+        <div class="bg-gray-900/90 p-3 rounded-xl border border-cyan-500/20">
+            <div class="flex justify-between items-center mb-2">
+                <span class="text-xs font-bold uppercase tracking-wider text-cyan-400">⚡ Engine Simulation</span>
+                <span id="fpsCounter" class="text-[10px] font-mono text-gray-400">60 FPS</span>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+                <button id="fastSimBtn" onclick="toggleFastSim()" class="bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold py-2 px-3 rounded-lg transition-all shadow-lg shadow-cyan-950">
+                    🚀 Fast Sim (4x)
+                </button>
+                <button id="pauseBtn" onclick="togglePause()" class="bg-gray-800 hover:bg-gray-700 text-gray-200 text-xs font-bold py-2 px-3 rounded-lg transition-all">
+                    ⏸️ Pause
+                </button>
+            </div>
+        </div>
 
-        const arenaSize = 30;
+        <!-- Camera Control Settings -->
+        <div class="bg-gray-900/90 p-3 rounded-xl border border-gray-800">
+            <div class="text-xs font-bold uppercase tracking-wider text-cyan-400 mb-2">📹 Dynamic Camera</div>
+            <div class="grid grid-cols-3 gap-1.5 text-xs">
+                <button id="camFollowBtn" onclick="setCameraMode('follow')" class="bg-cyan-500/20 border border-cyan-500 text-cyan-300 font-semibold py-1.5 rounded-md hover:bg-cyan-500/30 transition text-center">
+                    Follow Leader
+                </button>
+                <button id="camTopBtn" onclick="setCameraMode('top')" class="bg-gray-800 border border-gray-700 text-gray-300 font-semibold py-1.5 rounded-md hover:bg-gray-700 transition text-center">
+                    Top View
+                </button>
+                <button id="camFreeBtn" onclick="setCameraMode('free')" class="bg-gray-800 border border-gray-700 text-gray-300 font-semibold py-1.5 rounded-md hover:bg-gray-700 transition text-center">
+                    Free Orbit
+                </button>
+            </div>
+        </div>
 
-        function init3D() {
-            const container = document.getElementById("canvasContainer");
+        <!-- Reinforcement Learning Hyperparameters -->
+        <div class="bg-gray-900/90 p-3 rounded-xl border border-indigo-500/20 space-y-2">
+            <div class="flex justify-between items-center">
+                <span class="text-xs font-bold uppercase tracking-wider text-indigo-400">🧠 Q-Learning AI Hyperparameters</span>
+            </div>
             
-            // 建立 3D 場景
+            <div class="space-y-1">
+                <div class="flex justify-between text-xs text-gray-300">
+                    <span>Learning Rate (Alpha α):</span>
+                    <span id="alphaVal" class="font-mono text-cyan-400">0.25</span>
+                </div>
+                <input type="range" id="alphaRange" min="0.05" max="0.8" step="0.05" value="0.25" oninput="updateHyperparams()" class="w-full h-1.5 bg-gray-800 rounded-lg appearance-none cursor-pointer accent-cyan-400">
+            </div>
+
+            <div class="space-y-1">
+                <div class="flex justify-between text-xs text-gray-300">
+                    <span>Exploration Rate (Epsilon ε):</span>
+                    <span id="epsVal" class="font-mono text-cyan-400">0.15</span>
+                </div>
+                <input type="range" id="epsRange" min="0.0" max="0.8" step="0.05" value="0.15" oninput="updateHyperparams()" class="w-full h-1.5 bg-gray-800 rounded-lg appearance-none cursor-pointer accent-cyan-400">
+            </div>
+
+            <div class="space-y-1">
+                <div class="flex justify-between text-xs text-gray-300">
+                    <span>Discount Factor (Gamma γ):</span>
+                    <span id="gammaVal" class="font-mono text-cyan-400">0.90</span>
+                </div>
+                <input type="range" id="gammaRange" min="0.5" max="0.99" step="0.01" value="0.90" oninput="updateHyperparams()" class="w-full h-1.5 bg-gray-800 rounded-lg appearance-none cursor-pointer accent-cyan-400">
+            </div>
+
+            <div class="pt-2 flex gap-2">
+                <button onclick="saveBrain()" class="w-1/2 bg-indigo-600/30 hover:bg-indigo-600/50 border border-indigo-500/50 text-indigo-200 text-xs font-bold py-1.5 rounded-lg transition">
+                    💾 Save Brain
+                </button>
+                <button onclick="resetBrain()" class="w-1/2 bg-red-600/30 hover:bg-red-600/50 border border-red-500/50 text-red-200 text-xs font-bold py-1.5 rounded-lg transition">
+                    🗑️ Reset Brain
+                </button>
+            </div>
+        </div>
+
+        <!-- Reward Shaping Sliders -->
+        <div class="bg-gray-900/90 p-3 rounded-xl border border-emerald-500/20 space-y-2">
+            <div class="text-xs font-bold uppercase tracking-wider text-emerald-400">🎯 Reward Shaping</div>
+            
+            <div class="space-y-1">
+                <div class="flex justify-between text-xs text-gray-300">
+                    <span>Finish Line Reward:</span>
+                    <span id="rewWinVal" class="font-mono text-emerald-400">1000</span>
+                </div>
+                <input type="range" id="rewWinRange" min="200" max="2000" step="100" value="1000" oninput="updateRewards()" class="w-full h-1.5 bg-gray-800 rounded-lg appearance-none cursor-pointer accent-emerald-400">
+            </div>
+
+            <div class="space-y-1">
+                <div class="flex justify-between text-xs text-gray-300">
+                    <span>Fall/Crash Penalty:</span>
+                    <span id="rewCrashVal" class="font-mono text-red-400">-200</span>
+                </div>
+                <input type="range" id="rewCrashRange" min="-500" max="-50" step="25" value="-200" oninput="updateRewards()" class="w-full h-1.5 bg-gray-800 rounded-lg appearance-none cursor-pointer accent-red-400">
+            </div>
+
+            <div class="space-y-1">
+                <div class="flex justify-between text-xs text-gray-300">
+                    <span>Forward Progress Weight:</span>
+                    <span id="rewProgressVal" class="font-mono text-emerald-400">2.0</span>
+                </div>
+                <input type="range" id="rewProgressRange" min="0.5" max="5.0" step="0.5" value="2.0" oninput="updateRewards()" class="w-full h-1.5 bg-gray-800 rounded-lg appearance-none cursor-pointer accent-emerald-400">
+            </div>
+        </div>
+
+        <!-- Agent Count Slider -->
+        <div class="bg-gray-900/90 p-3 rounded-xl border border-gray-800 space-y-1">
+            <div class="flex justify-between text-xs text-gray-300 font-bold">
+                <span class="text-amber-400">🏎️ Active Cars Count:</span>
+                <span id="carCountVal" class="font-mono text-amber-400">60</span>
+            </div>
+            <input type="range" id="carCountRange" min="10" max="300" step="10" value="60" onchange="changeCarCount(this.value)" class="w-full h-1.5 bg-gray-800 rounded-lg appearance-none cursor-pointer accent-amber-400">
+        </div>
+
+        <!-- Real-Time Generation Performance Chart -->
+        <div class="bg-gray-900/90 p-3 rounded-xl border border-gray-800 flex flex-col gap-2">
+            <div class="text-[11px] font-bold text-gray-300 uppercase tracking-wider flex justify-between">
+                <span>📊 Generation Score History</span>
+                <span class="text-cyan-400 text-[10px]">Avg vs Peak</span>
+            </div>
+            <canvas id="chartCanvas" width="280" height="95" class="w-full h-24 bg-gray-950 rounded-lg border border-gray-800/80"></canvas>
+        </div>
+
+        <!-- Statistics Stats Box -->
+        <div class="bg-gray-900/90 p-3 rounded-xl border border-gray-800 text-xs space-y-1.5">
+            <div class="flex justify-between text-gray-400">
+                <span>Total Generations/Episodes:</span>
+                <span id="statEpisodes" class="font-mono font-bold text-gray-200">0</span>
+            </div>
+            <div class="flex justify-between text-gray-400">
+                <span>Highest Score Ever:</span>
+                <span id="statHighScore" class="font-mono font-bold text-emerald-400">0</span>
+            </div>
+            <div class="flex justify-between text-gray-400">
+                <span>Learned Q-States in Memory:</span>
+                <span id="statQStates" class="font-mono font-bold text-cyan-400">0</span>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="toast" class="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 bg-cyan-900/90 border border-cyan-400 text-cyan-100 text-xs font-semibold px-4 py-2 rounded-xl opacity-0 transition-opacity duration-300 pointer-events-none shadow-xl">
+        Brain Saved Successfully!
+    </div>
+
+    <!-- MAIN SIMULATION SCRIPT -->
+    <script>
+        // --- GLOBALS & CONFIGURATION ---
+        let scene, camera, renderer, controls;
+        let pipeMesh, pipeCurve, pipePathPoints = [];
+        let cars = [];
+        let numCars = 60;
+        let isPaused = false;
+        let isFastSim = true;
+        let cameraMode = 'follow'; // 'follow', 'top', 'free'
+        
+        // Hyperparameters & Reward Constants
+        let ALPHA = 0.25;
+        let EPSILON = 0.15;
+        let GAMMA = 0.90;
+        let REW_WIN = 1000;
+        let REW_CRASH = -200;
+        let REW_PROGRESS = 2.0;
+
+        // Stats & Shared Q-Brain
+        let totalEpisodes = 0;
+        let highScore = 0;
+        let episodeHistory = [];
+        let qTable = JSON.parse(localStorage.getItem('pipe_ai_qtable')) || {};
+
+        // Pipe Parameters
+        const PIPE_RADIUS = 11;
+        const PIPE_LENGTH_SEGMENTS = 180;
+        const PIPE_RADIAL_SEGMENTS = 24;
+        let pipeCurvePoints = [];
+
+        // FPS Stats
+        let lastTime = performance.now();
+        let frameCount = 0;
+        let currentFPS = 60;
+
+        // --- 1. THREE.JS SCENE SETUP ---
+        function initScene() {
+            const container = document.getElementById('canvasContainer');
+
+            // Scene
             scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x0f172a);
-            scene.fog = new THREE.Fog(0x0f172a, 35, 75);
+            scene.fog = new THREE.FogExp2(0x030712, 0.008);
 
-            // 攝影機
-            camera = new THREE.PerspectiveCamera(50, 750 / 480, 0.1, 1000);
-            camera.position.set(0, 32, 28);
-            camera.lookAt(0, 0, 0);
+            // Camera
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 20, 35);
 
-            // 渲染器
-            renderer = new THREE.WebGLRenderer({ antialias: true });
-            renderer.setSize(750, 480);
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
             renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
             container.appendChild(renderer.domElement);
 
-            // 光照設定
+            // Orbit Controls
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.maxDistance = 300;
+
+            // Ambient & Directional Lights
             const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
             scene.add(ambientLight);
 
-            const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
-            dirLight.position.set(20, 40, 20);
+            const dirLight = new THREE.DirectionalLight(0x38bdf8, 1.2);
+            dirLight.position.set(50, 100, 50);
             dirLight.castShadow = true;
+            dirLight.shadow.mapSize.width = 2048;
+            dirLight.shadow.mapSize.height = 2048;
             scene.add(dirLight);
 
-            // 地板
-            const floorGeo = new THREE.PlaneGeometry(arenaSize, arenaSize);
-            const floorMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.8 });
-            const floor = new THREE.Mesh(floorGeo, floorMat);
-            floor.rotation.x = -Math.PI / 2;
-            floor.receiveShadow = true;
-            scene.add(floor);
+            const pointLight = new THREE.PointLight(0xec4899, 2, 80);
+            pointLight.position.set(0, 0, 0);
+            scene.add(pointLight);
 
-            // 邊界牆壁
-            createWalls();
+            // Build 3D Pipe Track
+            createPipeTrack();
 
-            // 建立代理與箱子
-            resetEntities();
+            // Spawn AI Cars
+            spawnCars();
 
-            animate();
+            // Window Resize Listener
+            window.addEventListener('resize', onWindowResize);
         }
 
-        function createWalls() {
-            const wallMat = new THREE.MeshStandardMaterial({ color: 0x334155 });
-            const thickness = 1;
-            const h = 4;
+        // --- 2. 3D PIPE TRACK CREATION ---
+        function createPipeTrack() {
+            // Generate a curving 3D spline curve for the pipe path
+            const points = [];
+            const numPathPoints = 12;
+            for (let i = 0; i <= numPathPoints; i++) {
+                const t = i / numPathPoints;
+                const z = t * 450;
+                const x = Math.sin(t * Math.PI * 3) * 35;
+                const y = Math.cos(t * Math.PI * 2) * 20;
+                points.push(new THREE.Vector3(x, y, z));
+            }
 
-            const wallGeos = [
-                { w: arenaSize, d: thickness, x: 0, z: -arenaSize/2 },
-                { w: arenaSize, d: thickness, x: 0, z: arenaSize/2 },
-                { w: thickness, d: arenaSize, x: -arenaSize/2, z: 0 },
-                { w: thickness, d: arenaSize, x: arenaSize/2, z: 0 }
-            ];
+            pipeCurve = new THREE.CatmullRomCurve3(points);
+            pipePathPoints = pipeCurve.getPoints(PIPE_LENGTH_SEGMENTS);
 
-            wallGeos.forEach(wg => {
-                const geo = new THREE.BoxGeometry(wg.w, h, wg.d);
-                const mesh = new THREE.Mesh(geo, wallMat);
-                mesh.position.set(wg.x, h/2, wg.z);
-                mesh.castShadow = true;
-                mesh.receiveShadow = true;
-                scene.add(mesh);
-                walls.push(mesh);
+            // Pipe Tube Geometry
+            const tubeGeometry = new THREE.TubeGeometry(
+                pipeCurve,
+                PIPE_LENGTH_SEGMENTS,
+                PIPE_RADIUS,
+                PIPE_RADIAL_SEGMENTS,
+                false
+            );
+
+            // Pipe Wireframe / Grid Material
+            const tubeMaterial = new THREE.MeshStandardMaterial({
+                color: 0x0f172a,
+                roughness: 0.2,
+                metalness: 0.8,
+                wireframe: true,
+                transparent: true,
+                opacity: 0.45,
+                emissive: 0x0284c7,
+                emissiveIntensity: 0.2
             });
+
+            pipeMesh = new THREE.Mesh(tubeGeometry, tubeMaterial);
+            scene.add(pipeMesh);
+
+            // Add Neon Ring Marker at Finish Line
+            const finishPos = pipePathPoints[pipePathPoints.length - 1];
+            const finishTangent = pipeCurve.getTangentAt(1.0);
+            const ringGeo = new THREE.TorusGeometry(PIPE_RADIUS, 0.6, 16, 32);
+            const ringMat = new THREE.MeshBasicMaterial({ color: 0x10b981 });
+            const finishRing = new THREE.Mesh(ringGeo, ringMat);
+            finishRing.position.copy(finishPos);
+            finishRing.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), finishTangent);
+            scene.add(finishRing);
         }
 
-        function resetEntities() {
-            // 清除舊物件
-            [...hiders, ...seekers, ...boxes].forEach(obj => scene.remove(obj.mesh));
-            hiders = [];
-            seekers = [];
-            boxes = [];
+        // --- 3. AI CAR CLASS WITH RAYCASTING & MOVEMENT ---
+        class AICar {
+            constructor(id) {
+                this.id = id;
+                this.mesh = this.createCarMesh();
+                scene.add(this.mesh);
 
-            // 1. 建立箱子 (可被推動的 3D 方塊)
-            const boxGeo = new THREE.BoxGeometry(3, 3, 3);
-            const boxMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, roughness: 0.4 });
-            for (let i = 0; i < 4; i++) {
-                const mesh = new THREE.Mesh(boxGeo, boxMat);
-                mesh.position.set((Math.random() - 0.5) * 10, 1.5, (Math.random() - 0.5) * 10);
-                mesh.castShadow = true;
-                mesh.receiveShadow = true;
-                scene.add(mesh);
-                boxes.push({ mesh, vx: 0, vz: 0 });
+                // Laser Sensor Visuals
+                this.numSensors = 5;
+                this.sensorLines = [];
+                this.createSensorVisuals();
+
+                this.reset();
             }
 
-            // 2. 建立躲藏者 (Hiders - 藍色)
-            const hiderGeo = new THREE.SphereGeometry(1.2, 16, 16);
-            const hiderMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, roughness: 0.3 });
-            for (let i = 0; i < 3; i++) {
-                const mesh = new THREE.Mesh(hiderGeo, hiderMat);
-                mesh.position.set(-10 + (Math.random() - 0.5) * 4, 1.2, -10 + (Math.random() - 0.5) * 4);
-                mesh.castShadow = true;
-                scene.add(mesh);
-                hiders.push({ mesh, vx: (Math.random()-0.5)*0.1, vz: (Math.random()-0.5)*0.1 });
+            createCarMesh() {
+                const group = new THREE.Group();
+
+                // Car Chassis
+                const bodyGeo = new THREE.BoxGeometry(1.6, 0.8, 3.2);
+                const colorHex = Math.random() > 0.3 ? 0x38bdf8 : (Math.random() > 0.5 ? 0xec4899 : 0xfacc15);
+                const bodyMat = new THREE.MeshStandardMaterial({
+                    color: colorHex,
+                    roughness: 0.3,
+                    metalness: 0.7,
+                    emissive: colorHex,
+                    emissiveIntensity: 0.3
+                });
+                const body = new THREE.Mesh(bodyGeo, bodyMat);
+                body.castShadow = true;
+                group.add(body);
+
+                // Cabin Roof
+                const roofGeo = new THREE.BoxGeometry(1.2, 0.6, 1.6);
+                const roofMat = new THREE.MeshStandardMaterial({ color: 0x111827 });
+                const roof = new THREE.Mesh(roofGeo, roofMat);
+                roof.position.set(0, 0.6, -0.2);
+                group.add(roof);
+
+                // Wheels
+                const wheelGeo = new THREE.CylinderGeometry(0.4, 0.4, 0.3, 12);
+                const wheelMat = new THREE.MeshStandardMaterial({ color: 0x374151 });
+                wheelGeo.rotateZ(Math.PI / 2);
+
+                const offsets = [
+                    [-0.9, -0.3, 1.0], [0.9, -0.3, 1.0],
+                    [-0.9, -0.3, -1.0], [0.9, -0.3, -1.0]
+                ];
+                offsets.forEach(pos => {
+                    const wheel = new THREE.Mesh(wheelGeo, wheelMat);
+                    wheel.position.set(...pos);
+                    group.add(wheel);
+                });
+
+                return group;
             }
 
-            // 3. 建立尋找者 (Seekers - 紅色)
-            const seekerGeo = new THREE.ConeGeometry(1.3, 3, 16);
-            const seekerMat = new THREE.MeshStandardMaterial({ color: 0xf43f5e, roughness: 0.3 });
-            for (let i = 0; i < 2; i++) {
-                const mesh = new THREE.Mesh(seekerGeo, seekerMat);
-                mesh.rotation.x = Math.PI / 2;
-                mesh.position.set(10 + (Math.random() - 0.5) * 4, 1.5, 10 + (Math.random() - 0.5) * 4);
-                mesh.castShadow = true;
-                scene.add(mesh);
-                seekers.push({ mesh, vx: (Math.random()-0.5)*0.1, vz: (Math.random()-0.5)*0.1 });
+            createSensorVisuals() {
+                const lineMat = new THREE.LineBasicMaterial({ color: 0xef4444, transparent: true, opacity: 0.6 });
+                for (let i = 0; i < this.numSensors; i++) {
+                    const geo = new THREE.BufferGeometry().setFromPoints([
+                        new THREE.Vector3(0, 0, 0),
+                        new THREE.Vector3(0, 0, 10)
+                    ]);
+                    const line = new THREE.Line(geo, lineMat);
+                    scene.add(line);
+                    this.sensorLines.push(line);
+                }
+            }
+
+            reset() {
+                this.pathProgress = 0.002; // Distance t along pipe spline [0, 1]
+                this.angleOnPipe = Math.random() * Math.PI * 2; // Angle around pipe inner wall
+                this.speed = 0.001; // Speed along curve
+                this.angularVelocity = 0;
+                
+                this.isAlive = true;
+                this.hasFinished = false;
+                this.totalReward = 0;
+
+                this.lastStateKey = null;
+                this.lastAction = null;
+
+                this.update3DPosition();
+            }
+
+            // Calculate position inside the pipe tube inner surface
+            update3DPosition() {
+                if (!pipeCurve) return;
+
+                const centerPos = pipeCurve.getPointAt(Math.min(1.0, Math.max(0.0, this.pathProgress)));
+                const tangent = pipeCurve.getTangentAt(Math.min(1.0, Math.max(0.0, this.pathProgress)));
+
+                // Construct Local Frame (Normal, Binormal, Tangent)
+                const normal = new THREE.Vector3(0, 1, 0);
+                const binormal = new THREE.Vector3().crossVectors(tangent, normal).normalize();
+                const adjustedNormal = new THREE.Vector3().crossVectors(binormal, tangent).normalize();
+
+                // Inner wall surface vector offset
+                const r = PIPE_RADIUS - 0.8; // Car distance from central axis
+                const offsetX = Math.cos(this.angleOnPipe) * r;
+                const offsetY = Math.sin(this.angleOnPipe) * r;
+
+                const carPos = new THREE.Vector3()
+                    .copy(centerPos)
+                    .addScaledVector(binormal, offsetX)
+                    .addScaledVector(adjustedNormal, offsetY);
+
+                this.mesh.position.copy(carPos);
+
+                // Align car orientation with pipe path & inner curve rotation
+                const lookTarget = pipeCurve.getPointAt(Math.min(1.0, this.pathProgress + 0.005));
+                this.mesh.lookAt(lookTarget);
+                this.mesh.rotateZ(this.angleOnPipe + Math.PI / 2);
+            }
+
+            // Emit Raycasts to sense pipe wall distances
+            getSensors() {
+                // Return discretized wall clearance distances: [Left, Front-Left, Front, Front-Right, Right]
+                const sensorDistances = [];
+                const angles = [-1.1, -0.5, 0, 0.5, 1.1];
+
+                for (let i = 0; i < this.numSensors; i++) {
+                    const testAngle = this.angleOnPipe + angles[i];
+                    // Measure boundary angle offset relative to bottom/top of pipe
+                    const distToLimit = Math.abs(Math.sin(testAngle));
+                    
+                    let discreteVal = 2; // Clear
+                    if (distToLimit > 0.85) discreteVal = 0; // Danger close
+                    else if (distToLimit > 0.6) discreteVal = 1; // Warning
+
+                    sensorDistances.push(discreteVal);
+
+                    // Update sensor line visual graphics
+                    const p1 = this.mesh.position;
+                    const rayDir = new THREE.Vector3(Math.cos(testAngle), Math.sin(testAngle), 0.5).normalize();
+                    const p2 = new THREE.Vector3().copy(p1).addScaledVector(rayDir, 8);
+                    
+                    this.sensorLines[i].geometry.setFromPoints([p1, p2]);
+                    this.sensorLines[i].visible = this.isAlive && (this.id === 0 || cameraMode === 'follow');
+                }
+
+                return sensorDistances;
+            }
+
+            getStateKey() {
+                const s = this.getSensors();
+                const spdState = this.speed > 0.002 ? 1 : 0;
+                return `${s[0]}_${s[1]}_${s[2]}_${s[3]}_${s[4]}_${spdState}`;
+            }
+
+            chooseAction(stateKey) {
+                if (!qTable[stateKey]) {
+                    qTable[stateKey] = { 0: 0, 1: 0, 2: 0, 3: 0 }; // 0: Left, 1: Right, 2: Accelerate, 3: Brake
+                }
+
+                if (Math.random() < EPSILON) {
+                    return Math.floor(Math.random() * 4); // Exploration
+                }
+
+                const actions = qTable[stateKey];
+                let bestAction = 0;
+                let maxQ = -Infinity;
+                for (let a = 0; a < 4; a++) {
+                    if (actions[a] > maxQ) {
+                        maxQ = actions[a];
+                        bestAction = a;
+                    }
+                }
+                return bestAction;
+            }
+
+            update() {
+                if (!this.isAlive || this.hasFinished) return;
+
+                const stateKey = this.getStateKey();
+                const action = this.chooseAction(stateKey);
+
+                // Execute selected action
+                if (action === 0) this.angularVelocity -= 0.035; // Steer Left inside pipe
+                else if (action === 1) this.angularVelocity += 0.035; // Steer Right inside pipe
+                else if (action === 2) this.speed = Math.min(0.0035, this.speed + 0.00015); // Accelerate
+                else if (action === 3) this.speed = Math.max(0.0005, this.speed - 0.0002); // Brake
+
+                // Physics update
+                this.angularVelocity *= 0.88; // Steering friction
+                this.angleOnPipe += this.angularVelocity;
+                this.pathProgress += this.speed;
+
+                // Update 3D Transform
+                this.update3DPosition();
+
+                // Check Fall off / Excessive G-force Crash
+                let crashed = false;
+                if (Math.abs(Math.sin(this.angleOnPipe)) > 0.96) {
+                    crashed = true;
+                    this.isAlive = false;
+                }
+
+                // Check Finish Line
+                if (this.pathProgress >= 0.98) {
+                    this.hasFinished = true;
+                }
+
+                // Calculate Reward
+                let reward = 0;
+                if (crashed) {
+                    reward = REW_CRASH;
+                } else if (this.hasFinished) {
+                    reward = REW_WIN;
+                } else {
+                    reward = (this.speed * 1000) * REW_PROGRESS - Math.abs(this.angularVelocity) * 10;
+                }
+
+                this.totalReward += reward;
+
+                // Q-Learning Bellman Equation Update
+                const nextStateKey = this.getStateKey();
+                if (this.lastStateKey !== null && this.lastAction !== null) {
+                    if (!qTable[this.lastStateKey]) qTable[this.lastStateKey] = { 0: 0, 1: 0, 2: 0, 3: 0 };
+                    if (!qTable[nextStateKey]) qTable[nextStateKey] = { 0: 0, 1: 0, 2: 0, 3: 0 };
+
+                    const oldQ = qTable[this.lastStateKey][this.lastAction];
+                    const maxNextQ = Math.max(...Object.values(qTable[nextStateKey]));
+
+                    // Q(s,a) = Q(s,a) + α * [ R + γ * max Q(s',a') - Q(s,a) ]
+                    qTable[this.lastStateKey][this.lastAction] = oldQ + ALPHA * (reward + GAMMA * maxNextQ - oldQ);
+                }
+
+                this.lastStateKey = stateKey;
+                this.lastAction = action;
+            }
+
+            destroy() {
+                scene.remove(this.mesh);
+                this.sensorLines.forEach(l => scene.remove(l));
             }
         }
 
-        function resetSimulation() {
-            roundCount++;
-            document.getElementById("roundVal").innerText = roundCount;
-            resetEntities();
+        // --- 4. POPULATION & SIMULATION MANAGEMENT ---
+        function spawnCars() {
+            cars.forEach(c => c.destroy());
+            cars = [];
+            for (let i = 0; i < numCars; i++) {
+                cars.push(new AICar(i));
+            }
         }
 
-        function togglePause() {
-            isPaused = !isPaused;
+        function changeCarCount(newVal) {
+            numCars = parseInt(newVal);
+            document.getElementById('carCountVal').innerText = numCars;
+            spawnCars();
         }
 
-        // 3D 物理與 AI 行為邏輯
-        function updateAI() {
+        function updateSimulation() {
             if (isPaused) return;
 
-            // 躲藏者行為：聚集並推動箱子組成防禦基地
-            hiders.forEach(h => {
-                h.mesh.position.x += h.vx;
-                h.mesh.position.z += h.vz;
+            const ticks = isFastSim ? 4 : 1;
+            for (let t = 0; t < ticks; t++) {
+                let aliveCount = 0;
+                let leader = getLeadingCar();
 
-                // 隨機轉向與邊界碰撞
-                if (Math.abs(h.mesh.position.x) > arenaSize/2 - 3) h.vx *= -1;
-                if (Math.abs(h.mesh.position.z) > arenaSize/2 - 3) h.vz *= -1;
-                if (Math.random() < 0.02) {
-                    h.vx = (Math.random() - 0.5) * 0.12;
-                    h.vz = (Math.random() - 0.5) * 0.12;
+                for (let car of cars) {
+                    if (car.isAlive && !car.hasFinished) {
+                        car.update();
+                        aliveCount++;
+                    }
                 }
 
-                // 箱子推動互動
-                boxes.forEach(b => {
-                    let dist = h.mesh.position.distanceTo(b.mesh.position);
-                    if (dist < 2.5) {
-                        b.mesh.position.x += h.vx * 1.5;
-                        b.mesh.position.z += h.vz * 1.5;
-                    }
-                });
-            });
+                // If all cars crashed or finished -> Trigger Next Generation / Episode
+                if (aliveCount === 0) {
+                    totalEpisodes++;
 
-            // 尋找者行為：追逐躲藏者
-            seekers.forEach(s => {
-                // 尋找最近的躲藏者
-                let target = hiders[0].mesh.position;
-                let minDist = s.mesh.position.distanceTo(target);
-                hiders.forEach(h => {
-                    let d = s.mesh.position.distanceTo(h.mesh.position);
-                    if (d < minDist) { minDist = d; target = h.mesh.position; }
-                });
+                    const scores = cars.map(c => c.totalReward);
+                    const avgScore = scores.reduce((a, b) => a + b, 0) / cars.length;
+                    const maxScore = Math.max(...scores);
 
-                // 朝目標移動
-                let dx = target.x - s.mesh.position.x;
-                let dz = target.z - s.mesh.position.z;
-                let len = Math.hypot(dx, dz);
-                if (len > 0.1) {
-                    s.mesh.position.x += (dx / len) * 0.08;
-                    s.mesh.position.z += (dz / len) * 0.08;
+                    if (maxScore > highScore) highScore = maxScore;
+
+                    episodeHistory.push({ avg: avgScore, max: maxScore });
+                    if (episodeHistory.length > 30) episodeHistory.shift();
+
+                    // Respawn population with shared memory
+                    cars.forEach(c => c.reset());
                 }
+            }
 
-                // 尋找者撞擊箱子可以推開箱子
-                boxes.forEach(b => {
-                    let dist = s.mesh.position.distanceTo(b.mesh.position);
-                    if (dist < 2.5) {
-                        b.mesh.position.x += (dx / len) * 0.1;
-                        b.mesh.position.z += (dz / len) * 0.1;
-                    }
-                });
+            updateHUD();
+            updateCamera();
+        }
+
+        function getLeadingCar() {
+            let leader = cars[0];
+            for (let car of cars) {
+                if (car.pathProgress > leader.pathProgress && car.isAlive) {
+                    leader = car;
+                }
+            }
+            return leader;
+        }
+
+        // --- 5. CAMERA CONTROLS & HUD UPDATING ---
+        function updateCamera() {
+            const leader = getLeadingCar();
+
+            if (cameraMode === 'follow' && leader && leader.mesh) {
+                const carPos = leader.mesh.position;
+                const targetCamPos = new THREE.Vector3()
+                    .copy(carPos)
+                    .add(new THREE.Vector3(0, 10, -18));
+
+                camera.position.lerp(targetCamPos, 0.1);
+                controls.target.lerp(carPos, 0.1);
+                controls.update();
+            } else if (cameraMode === 'top') {
+                const centerPos = pipeCurve.getPointAt(0.5);
+                camera.position.set(centerPos.x, centerPos.y + 120, centerPos.z);
+                controls.target.copy(centerPos);
+                controls.update();
+            } else {
+                controls.update();
+            }
+        }
+
+        function setCameraMode(mode) {
+            cameraMode = mode;
+            document.getElementById('camFollowBtn').className = mode === 'follow' ? 'bg-cyan-500/20 border border-cyan-500 text-cyan-300 font-semibold py-1.5 rounded-md text-center' : 'bg-gray-800 border border-gray-700 text-gray-300 font-semibold py-1.5 rounded-md text-center';
+            document.getElementById('camTopBtn').className = mode === 'top' ? 'bg-cyan-500/20 border border-cyan-500 text-cyan-300 font-semibold py-1.5 rounded-md text-center' : 'bg-gray-800 border border-gray-700 text-gray-300 font-semibold py-1.5 rounded-md text-center';
+            document.getElementById('camFreeBtn').className = mode === 'free' ? 'bg-cyan-500/20 border border-cyan-500 text-cyan-300 font-semibold py-1.5 rounded-md text-center' : 'bg-gray-800 border border-gray-700 text-gray-300 font-semibold py-1.5 rounded-md text-center';
+        }
+
+        function updateHUD() {
+            const leader = getLeadingCar();
+            const activeCars = cars.filter(c => c.isAlive).length;
+
+            document.getElementById('hudSpeed').innerText = `${Math.round(leader.speed * 35000)} km/h`;
+            document.getElementById('hudDist').innerText = `${(leader.pathProgress * 450).toFixed(1)}m`;
+            document.getElementById('hudCars').innerText = `${activeCars} / ${cars.length}`;
+
+            document.getElementById('statEpisodes').innerText = totalEpisodes;
+            document.getElementById('statHighScore').innerText = Math.round(highScore);
+            document.getElementById('statQStates').innerText = Object.keys(qTable).length;
+        }
+
+        // --- 6. REAL-TIME 2D CANVAS BAR CHART ---
+        function renderChart() {
+            const chartCanvas = document.getElementById('chartCanvas');
+            const ctx = chartCanvas.getContext('2d');
+            ctx.clearRect(0, 0, chartCanvas.width, chartCanvas.height);
+
+            if (episodeHistory.length === 0) {
+                ctx.fillStyle = "#6b7280";
+                ctx.font = "11px sans-serif";
+                ctx.fillText("Awaiting generation completion...", 15, 50);
+                return;
+            }
+
+            const maxVal = Math.max(...episodeHistory.map(h => h.max), 100);
+            const minVal = Math.min(...episodeHistory.map(h => h.avg), -100);
+            const range = (maxVal - minVal) || 1;
+
+            const w = chartCanvas.width;
+            const h = chartCanvas.height;
+            const barWidth = Math.max(4, (w - 30) / episodeHistory.length - 3);
+            const zeroY = h - 12 - ((0 - minVal) / range) * (h - 24);
+
+            // Zero Line
+            ctx.strokeStyle = "#374151";
+            ctx.beginPath();
+            ctx.moveTo(10, zeroY);
+            ctx.lineTo(w - 10, zeroY);
+            ctx.stroke();
+
+            // Draw Generation Bars
+            episodeHistory.forEach((ep, i) => {
+                const x = 15 + i * (barWidth + 3);
+
+                // Peak Score Bar (Green)
+                const maxH = ((ep.max - 0) / range) * (h - 24);
+                ctx.fillStyle = "rgba(16, 185, 129, 0.85)";
+                ctx.fillRect(x, Math.min(zeroY, zeroY - maxH), barWidth, Math.abs(maxH));
+
+                // Average Score Bar (Blue)
+                const avgH = ((ep.avg - 0) / range) * (h - 24);
+                ctx.fillStyle = "rgba(56, 189, 248, 0.9)";
+                ctx.fillRect(x + 1, Math.min(zeroY, zeroY - avgH), Math.max(1, barWidth - 2), Math.abs(avgH));
             });
         }
 
+        // --- 7. CONTROLS & HYPERPARAMETER HANDLERS ---
+        function togglePause() {
+            isPaused = !isPaused;
+            document.getElementById('pauseBtn').innerText = isPaused ? "▶️ Resume" : "⏸️ Pause";
+        }
+
+        function toggleFastSim() {
+            isFastSim = !isFastSim;
+            const btn = document.getElementById('fastSimBtn');
+            btn.innerText = isFastSim ? "🚀 Fast Sim (4x)" : "🐢 Normal (1x)";
+            btn.className = isFastSim 
+                ? "bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold py-2 px-3 rounded-lg transition-all shadow-lg shadow-cyan-950"
+                : "bg-gray-800 hover:bg-gray-700 text-gray-200 text-xs font-bold py-2 px-3 rounded-lg transition-all";
+        }
+
+        function updateHyperparams() {
+            ALPHA = parseFloat(document.getElementById('alphaRange').value);
+            EPSILON = parseFloat(document.getElementById('epsRange').value);
+            GAMMA = parseFloat(document.getElementById('gammaRange').value);
+
+            document.getElementById('alphaVal').innerText = ALPHA.toFixed(2);
+            document.getElementById('epsVal').innerText = EPSILON.toFixed(2);
+            document.getElementById('gammaVal').innerText = GAMMA.toFixed(2);
+        }
+
+        function updateRewards() {
+            REW_WIN = parseFloat(document.getElementById('rewWinRange').value);
+            REW_CRASH = parseFloat(document.getElementById('rewCrashRange').value);
+            REW_PROGRESS = parseFloat(document.getElementById('rewProgressRange').value);
+
+            document.getElementById('rewWinVal').innerText = REW_WIN;
+            document.getElementById('rewCrashVal').innerText = REW_CRASH;
+            document.getElementById('rewProgressVal').innerText = REW_PROGRESS.toFixed(1);
+        }
+
+        function saveBrain() {
+            localStorage.setItem('pipe_ai_qtable', JSON.stringify(qTable));
+            showToast("💾 Q-Learning Brain Saved to Storage!");
+        }
+
+        function resetBrain() {
+            qTable = {};
+            localStorage.removeItem('pipe_ai_qtable');
+            totalEpisodes = 0;
+            highScore = 0;
+            episodeHistory = [];
+            cars.forEach(c => c.reset());
+            showToast("🗑️ Brain Memory Reset!");
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            toast.innerText = msg;
+            toast.style.opacity = '1';
+            setTimeout(() => { toast.style.opacity = '0'; }, 2500);
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        // --- 8. MAIN ANIMATION & RENDERING LOOP ---
         function animate() {
             requestAnimationFrame(animate);
-            updateAI();
+
+            // FPS Counter
+            const now = performance.now();
+            frameCount++;
+            if (now - lastTime >= 1000) {
+                currentFPS = frameCount;
+                document.getElementById('fpsCounter').innerText = `${currentFPS} FPS`;
+                frameCount = 0;
+                lastTime = now;
+            }
+
+            // Update Physics & AI Logic
+            updateSimulation();
+
+            // Render Chart & 3D Scene
+            renderChart();
             renderer.render(scene, camera);
         }
 
-        window.onload = init3D;
+        // Initialize on Window Load
+        window.onload = function() {
+            initScene();
+            animate();
+        };
     </script>
 </body>
 </html>
