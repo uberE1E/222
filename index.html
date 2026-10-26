@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>極速 Q-Learning AI 雙頻背景演化競賽模擬器 (5000輛)</title>
+    <title>極速 Q-Learning AI 雙頻背景演化競賽模擬器 (甩尾與評分自訂版)</title>
     <style>
         * { box-sizing: border-box; }
         body {
@@ -21,13 +21,13 @@
         }
         h1 {
             margin: 4px 0;
-            font-size: 20px;
+            font-size: 18px;
             color: #f1c40f;
             text-shadow: 0 0 10px rgba(241, 196, 15, 0.4);
         }
         #mainContainer {
             display: flex;
-            gap: 12px;
+            gap: 10px;
             align-items: flex-start;
         }
         #canvasWrapper {
@@ -41,29 +41,30 @@
             cursor: crosshair;
         }
         #controlPanel {
-            width: 310px;
+            width: 330px;
             background: #1e1e1e;
             border: 1px solid #333;
             border-radius: 8px;
-            padding: 12px;
+            padding: 10px;
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 8px;
             box-shadow: 0 4px 20px rgba(0,0,0,0.5);
-            max-height: 580px;
+            max-height: 600px;
             overflow-y: auto;
         }
         .panel-section {
             background: #252525;
-            padding: 8px 10px;
+            padding: 6px 8px;
             border-radius: 6px;
             border-left: 4px solid #3498db;
         }
         .panel-section.edit-mode { border-left-color: #e67e22; }
         .panel-section.sim-mode { border-left-color: #2ecc71; }
+        .panel-section.reward-mode { border-left-color: #9b59b6; }
         .panel-section h3 {
-            margin: 0 0 6px 0;
-            font-size: 13px;
+            margin: 0 0 4px 0;
+            font-size: 12px;
             color: #fff;
             display: flex;
             justify-content: space-between;
@@ -73,21 +74,21 @@
             display: flex;
             justify-content: space-between;
             font-size: 11px;
-            margin-bottom: 3px;
+            margin-bottom: 2px;
             color: #bbb;
         }
         .stat-val { font-weight: bold; color: #2ecc71; }
         .btn-group {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 5px;
-            margin-top: 4px;
+            gap: 4px;
+            margin-top: 3px;
         }
         button {
             background-color: #3498db;
             color: white;
             border: none;
-            padding: 6px 8px;
+            padding: 5px 6px;
             border-radius: 4px;
             font-size: 11px;
             font-weight: bold;
@@ -105,25 +106,25 @@
         .slider-group {
             display: flex;
             flex-direction: column;
-            gap: 2px;
-            font-size: 11px;
-            margin-top: 4px;
+            gap: 1px;
+            font-size: 10px;
+            margin-top: 3px;
             color: #aaa;
         }
         input[type="range"] { width: 100%; accent-color: #3498db; }
         .instructions {
             font-size: 10px;
             color: #888;
-            line-height: 1.3;
+            line-height: 1.2;
             background: #181818;
-            padding: 6px;
+            padding: 5px;
             border-radius: 4px;
         }
     </style>
 </head>
 <body>
 
-    <h1>🏎️ 極速 Q-Learning AI 雙頻背景演化模擬器</h1>
+    <h1>🏎️ 極速 Q-Learning AI 雙頻背景演化模擬器 (甩尾與評分自訂版)</h1>
 
     <div id="mainContainer">
         <div id="canvasWrapper">
@@ -136,11 +137,11 @@
                 <h3>⚡ 雙模擬器與演化控制</h3>
                 <div class="stat-row">
                     <span>運作模式:</span>
-                    <button id="simToggleBtn" class="success" style="width: auto; padding: 2px 8px;" onclick="toggleDualSimMode()">雙模擬器 (背景加速)</button>
+                    <button id="simToggleBtn" class="success" style="width: auto; padding: 2px 6px;" onclick="toggleDualSimMode()">雙模擬器 (背景加速)</button>
                 </div>
                 <div class="stat-row">
                     <span>演化狀態:</span>
-                    <button id="pauseBtn" class="secondary" style="width: auto; padding: 2px 8px;" onclick="togglePause()">暫停演化</button>
+                    <button id="pauseBtn" class="secondary" style="width: auto; padding: 2px 6px;" onclick="togglePause()">暫停演化</button>
                 </div>
             </div>
 
@@ -153,9 +154,26 @@
                     <button id="toolFinishBtn" onclick="setEditTool('finish')">🏁 設定終點</button>
                     <button id="toolEraseBtn" onclick="setEditTool('erase')">🧹 橡皮擦</button>
                 </div>
-                <div class="btn-group" style="margin-top: 4px;">
+                <div class="btn-group" style="margin-top: 3px;">
                     <button class="secondary" onclick="clearTrack()">清空賽道</button>
                     <button class="secondary" onclick="loadPresetTrack()">載入極限彎道</button>
+                </div>
+            </div>
+
+            <!-- 得分與獎懲機制自訂調整區 (新增) -->
+            <div class="panel-section reward-mode">
+                <h3>🎯 得分與獎懲機制調整</h3>
+                <div class="slider-group">
+                    <label>到達終點獎勵: <span id="rewWinTxt" class="stat-val">500</span></label>
+                    <input type="range" id="rewWinRange" min="100" max="1000" step="50" value="500">
+                </div>
+                <div class="slider-group">
+                    <label>撞牆懲罰: <span id="rewCrashTxt" class="stat-val">-150</span></label>
+                    <input type="range" id="rewCrashRange" min="-500" max="-10" step="10" value="-150">
+                </div>
+                <div class="slider-group">
+                    <label>甩尾過彎加分: <span id="rewDriftTxt" class="stat-val">3.5</span></label>
+                    <input type="range" id="rewDriftRange" min="0" max="10" step="0.5" value="3.5">
                 </div>
             </div>
 
@@ -183,7 +201,7 @@
                     <label>探索率 (Epsilon): <span id="epsTxt">0.15</span></label>
                     <input type="range" id="epsRange" min="0.0" max="0.8" step="0.05" value="0.15">
                 </div>
-                <div class="btn-group" style="margin-top: 6px;">
+                <div class="btn-group" style="margin-top: 4px;">
                     <button class="secondary" onclick="saveBrain()">💾 儲存大腦</button>
                     <button class="danger" onclick="clearBrain()">🗑️ 清空記憶</button>
                 </div>
@@ -199,7 +217,7 @@
             </div>
 
             <div class="instructions">
-                <strong>💡 提示：</strong> 5000 輛車時建議開啟「雙模擬器」，背景將全速進行數學運算演化，前台切換渲染時順暢不卡頓！
+                <strong>💡 提示：</strong> 賽車現在擁有動態甩尾機制（當轉向與車速夾角產生側滑時自動觸發甩尾車尾燈軌跡與加分）！
             </div>
         </div>
     </div>
@@ -217,13 +235,26 @@
         const gammaRange = document.getElementById("gammaRange");
         const epsRange = document.getElementById("epsRange");
 
+        // 獎懲自訂 UI 元素
+        const rewWinRange = document.getElementById("rewWinRange");
+        const rewCrashRange = document.getElementById("rewCrashRange");
+        const rewDriftRange = document.getElementById("rewDriftRange");
+
+        let REW_WIN = parseFloat(rewWinRange.value);
+        let REW_CRASH = parseFloat(rewCrashRange.value);
+        let REW_DRIFT = parseFloat(rewDriftRange.value);
+
+        rewWinRange.oninput = (e) => { REW_WIN = parseFloat(e.target.value); document.getElementById("rewWinTxt").innerText = REW_WIN; };
+        rewCrashRange.oninput = (e) => { REW_CRASH = parseFloat(e.target.value); document.getElementById("rewCrashTxt").innerText = REW_CRASH; };
+        rewDriftRange.oninput = (e) => { REW_DRIFT = parseFloat(e.target.value); document.getElementById("rewDriftTxt").innerText = REW_DRIFT; };
+
         // 超參數
         let ALPHA = parseFloat(alphaRange.value);
         let GAMMA = parseFloat(gammaRange.value);
         let EPSILON = parseFloat(epsRange.value);
         let numAgents = 500;
         let isPaused = false;
-        let isDualSimActive = true; // 雙模擬器模式
+        let isDualSimActive = true;
 
         alphaRange.oninput = (e) => { ALPHA = parseFloat(e.target.value); document.getElementById("alphaTxt").innerText = ALPHA; };
         gammaRange.oninput = (e) => { GAMMA = parseFloat(e.target.value); document.getElementById("gammaTxt").innerText = GAMMA; };
@@ -238,18 +269,18 @@
 
         let generation = 1;
         let totalWins = 0;
-        let qTable = JSON.parse(localStorage.getItem("q_5000_brain")) || {};
+        let qTable = JSON.parse(localStorage.getItem("q_drift_brain")) || {};
         let agents = [];
 
         function saveBrain() {
-            localStorage.setItem("q_5000_brain", JSON.stringify(qTable));
+            localStorage.setItem("q_drift_brain", JSON.stringify(qTable));
             alert("💾 AI 大腦已成功儲存至瀏覽器！");
         }
 
         function clearBrain() {
             if (confirm("⚠️ 確定要清空所有 AI 大腦記憶嗎？")) {
                 qTable = {};
-                localStorage.removeItem("q_5000_brain");
+                localStorage.removeItem("q_drift_brain");
                 generation = 1;
                 totalWins = 0;
                 resetSimulation();
@@ -281,11 +312,8 @@
         function loadPresetTrack() {
             walls = [];
             let w = canvas.width, h = canvas.height;
-            // 外牆
             addWallBox(20, 20, w - 40, h - 40);
-            // 內置極限彎道與障礙
             addWallBox(160, 140, w - 320, h - 280);
-            // 額外增加急轉彎障礙物
             walls.push({ x1: 300, y1: 140, x2: 300, y2: 300 });
             walls.push({ x1: 550, y1: 280, x2: 550, y2: 440 });
 
@@ -344,7 +372,7 @@
             return null;
         }
 
-        // 賽車類別 (車體細節完整，採用改良式雷達克服急轉彎)
+        // 賽車類別 (包含甩尾機制與完整車體細節)
         class Car {
             constructor() {
                 this.color = `hsl(${Math.random() * 360}, 85%, 60%)`;
@@ -355,16 +383,17 @@
                 this.x = startPoint.x;
                 this.y = startPoint.y;
                 this.angle = startPoint.angle;
+                this.velocityAngle = startPoint.angle; // 甩尾動量方向
                 this.speed = 0;
-                this.maxSpeed = 4.8;
+                this.maxSpeed = 5.0;
                 this.radius = 9;
                 this.isAlive = true;
                 this.hasWon = false;
+                this.isDrifting = false;
                 this.lastStateKey = null;
                 this.lastAction = null;
             }
 
-            // 改良式 5 道雷達 (涵蓋更廣角度，提早預判急轉彎)
             getSensors() {
                 let angles = [-Math.PI/2, -Math.PI/4, 0, Math.PI/4, Math.PI/2];
                 let readings = [];
@@ -407,19 +436,34 @@
                 let stateKey = this.getStateKey();
                 let action = this.chooseAction(stateKey);
 
-                // 動態轉向與車速調整 (急轉彎優化：偵測側邊過近時自動減速切入)
                 let sensors = this.getSensors();
                 if (sensors[0] === 0 || sensors[4] === 0) {
-                    this.speed = Math.max(1.0, this.speed - 0.25); // 遇側牆自動減速過彎
+                    this.speed = Math.max(1.0, this.speed - 0.25);
                 }
 
-                if (action === 0) this.angle -= 0.08;
-                else if (action === 1) this.angle += 0.08;
-                else if (action === 2) this.speed = Math.min(this.maxSpeed, this.speed + 0.2);
-                else if (action === 3) this.speed = Math.max(0.8, this.speed - 0.2);
+                let targetAngle = this.angle;
+                if (action === 0) { this.angle -= 0.085; }
+                else if (action === 1) { this.angle += 0.085; }
+                else if (action === 2) { this.speed = Math.min(this.maxSpeed, this.speed + 0.22); }
+                else if (action === 3) { this.speed = Math.max(0.8, this.speed - 0.22); }
 
-                this.x += Math.cos(this.angle) * this.speed;
-                this.y += Math.sin(this.angle) * this.speed;
+                // 甩尾機制 (Drift physics): 車輛速度向量與車頭夾角過大時產生側滑甩尾
+                let angleDiff = this.angle - this.velocityAngle;
+                // 規範化夾角到 -PI 到 PI
+                while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+                while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+
+                if (Math.abs(angleDiff) > 0.35 && this.speed > 3.0) {
+                    this.isDrifting = true;
+                } else {
+                    this.isDrifting = false;
+                }
+
+                // 慣性滑動插值
+                this.velocityAngle += angleDiff * 0.15;
+
+                this.x += Math.cos(this.velocityAngle) * this.speed;
+                this.y += Math.sin(this.velocityAngle) * this.speed;
 
                 let hitWall = false;
                 for (let w of walls) {
@@ -438,7 +482,8 @@
 
                 if (hitWall) this.isAlive = false;
 
-                let reward = hitWall ? -150 : (this.hasWon ? 400 : 1.2 + this.speed * 0.4);
+                // 獎勵計算 (結合動態自訂終點獎勵、撞牆懲罰與甩尾加分)
+                let reward = hitWall ? REW_CRASH : (this.hasWon ? REW_WIN : (1.2 + this.speed * 0.4 + (this.isDrifting ? REW_DRIFT : 0)));
                 let nextState = this.getStateKey();
 
                 if (this.lastStateKey !== null && this.lastAction !== null) {
@@ -457,14 +502,23 @@
                 ctx.save();
                 ctx.translate(this.x, this.y);
                 ctx.rotate(this.angle);
-                // 精緻車身細節
+
+                // 車身
                 ctx.fillStyle = this.color;
                 ctx.fillRect(-12, -7, 24, 14);
                 ctx.fillStyle = '#111';
-                ctx.fillRect(0, -5, 5, 10); // 擋風玻璃
+                ctx.fillRect(0, -5, 5, 10);
                 ctx.fillStyle = '#fff';
-                ctx.fillRect(10, -6, 3, 3); // 車燈
+                ctx.fillRect(10, -6, 3, 3);
                 ctx.fillRect(10, 3, 3, 3);
+
+                // 甩尾時顯示輪胎胎痕光效
+                if (this.isDrifting) {
+                    ctx.fillStyle = "rgba(241, 196, 15, 0.7)";
+                    ctx.fillRect(-10, -10, 6, 4);
+                    ctx.fillRect(-10, 6, 6, 4);
+                }
+
                 ctx.restore();
             }
         }
@@ -500,7 +554,6 @@
                 ctx.beginPath(); ctx.moveTo(w.x1, w.y1); ctx.lineTo(w.x2, w.y2); ctx.stroke();
             }
 
-            // 渲染賽車 (支援高達 5,000 輛高效繪製)
             let aliveCount = 0;
             for (let agent of agents) {
                 if (agent.isAlive && !agent.hasWon) {
@@ -515,10 +568,8 @@
             qStatesValEl.innerText = Object.keys(qTable).length;
         }
 
-        // 主迴圈與雙模擬器背景加速機制
         function gameLoop() {
             if (!isPaused) {
-                // 如果開啟雙模擬器，背景每幀額外多跑 3 次迭代以加速演化
                 let iterations = isDualSimActive ? 4 : 1;
                 for (let it = 0; it < iterations; it++) {
                     let aliveCount = 0;
