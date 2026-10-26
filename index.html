@@ -1,14 +1,14 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Learns to Drive on Pipes - 3D Simulation</title>
-    <!-- Tailwind CSS for UI Layout -->
+    <title>3D 管道 AI 強化學習賽車模擬器 (Trackmania Pipe AI)</title>
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Three.js Library -->
+    <!-- Three.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <!-- OrbitControls for camera manipulation -->
+    <!-- OrbitControls -->
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
     <style>
         body {
@@ -22,7 +22,7 @@
         canvas {
             display: block;
         }
-        /* Custom scrollbar for control panel */
+        /* Custom Scrollbar */
         ::-webkit-scrollbar {
             width: 6px;
         }
@@ -46,62 +46,78 @@
     <!-- UI Overlay Header -->
     <div class="absolute top-4 left-4 z-10 pointer-events-none">
         <h1 class="text-2xl font-black tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-sky-400 to-indigo-500 drop-shadow-[0_0_15px_rgba(56,189,248,0.5)]">
-            🏎️ TRACKMANIA 3D PIPE AI
+            🏎️ 3D 管道 AI 強化學習賽車模擬器
         </h1>
         <p class="text-xs text-gray-400 font-medium tracking-wide">
-            Inspired by Yosh's <span class="text-cyan-400">"AI Learns to Drive on Pipes"</span> • Reinforcement Learning (Q-Learning)
+            致敬 Yosh 《AI Learns to Drive on Pipes》 • 強化學習 (Q-Learning) 3D 管道駕駛
         </p>
     </div>
 
     <!-- HUD Overlay for Active Leading Car -->
     <div id="hudBox" class="absolute top-4 left-1/2 -translate-x-1/2 z-10 bg-gray-900/80 backdrop-blur-md border border-cyan-500/30 rounded-xl px-5 py-2 flex items-center gap-6 shadow-[0_0_20px_rgba(0,0,0,0.6)]">
         <div class="text-center">
-            <div class="text-[10px] text-gray-400 uppercase tracking-widest font-bold">Leading Car Speed</div>
+            <div class="text-[10px] text-gray-400 uppercase tracking-widest font-bold">領先車速</div>
             <div id="hudSpeed" class="text-lg font-black text-cyan-400">0 km/h</div>
         </div>
         <div class="w-px h-8 bg-gray-700/60"></div>
         <div class="text-center">
-            <div class="text-[10px] text-gray-400 uppercase tracking-widest font-bold">Distance Progress</div>
+            <div class="text-[10px] text-gray-400 uppercase tracking-widest font-bold">前進距離</div>
             <div id="hudDist" class="text-lg font-black text-emerald-400">0.0m</div>
         </div>
         <div class="w-px h-8 bg-gray-700/60"></div>
         <div class="text-center">
-            <div class="text-[10px] text-gray-400 uppercase tracking-widest font-bold">Active Cars</div>
+            <div class="text-[10px] text-gray-400 uppercase tracking-widest font-bold">存活車輛</div>
             <div id="hudCars" class="text-lg font-black text-amber-400">0 / 0</div>
         </div>
     </div>
 
     <!-- Main Control Panel (Right Side) -->
-    <div class="absolute top-4 right-4 bottom-4 w-80 z-10 bg-gray-950/85 backdrop-blur-xl border border-gray-800 rounded-2xl p-4 flex flex-col gap-4 shadow-2xl overflow-y-auto">
+    <div class="absolute top-4 right-4 bottom-4 w-80 z-10 bg-gray-950/85 backdrop-blur-xl border border-gray-800 rounded-2xl p-4 flex flex-col gap-3 shadow-2xl overflow-y-auto">
         
-        <!-- Simulation Acceleration & Status -->
+        <!-- Simulation Engine Control -->
         <div class="bg-gray-900/90 p-3 rounded-xl border border-cyan-500/20">
             <div class="flex justify-between items-center mb-2">
-                <span class="text-xs font-bold uppercase tracking-wider text-cyan-400">⚡ Engine Simulation</span>
+                <span class="text-xs font-bold uppercase tracking-wider text-cyan-400">⚡ 模擬器加速與狀態</span>
                 <span id="fpsCounter" class="text-[10px] font-mono text-gray-400">60 FPS</span>
             </div>
             <div class="grid grid-cols-2 gap-2">
                 <button id="fastSimBtn" onclick="toggleFastSim()" class="bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold py-2 px-3 rounded-lg transition-all shadow-lg shadow-cyan-950">
-                    🚀 Fast Sim (4x)
+                    🚀 加速模擬 (4x)
                 </button>
                 <button id="pauseBtn" onclick="togglePause()" class="bg-gray-800 hover:bg-gray-700 text-gray-200 text-xs font-bold py-2 px-3 rounded-lg transition-all">
-                    ⏸️ Pause
+                    ⏸️ 暫停
                 </button>
             </div>
         </div>
 
-        <!-- Camera Control Settings -->
+        <!-- Track Preset Switcher -->
+        <div class="bg-gray-900/90 p-3 rounded-xl border border-purple-500/20 space-y-2">
+            <div class="text-xs font-bold uppercase tracking-wider text-purple-400">🛣️ 賽道地圖預設</div>
+            <div class="grid grid-cols-3 gap-1.5 text-xs">
+                <button id="trackPresetStraight" onclick="changeTrackPreset('straight')" class="bg-gray-800 border border-gray-700 text-gray-300 font-semibold py-1.5 rounded-md hover:bg-gray-700 transition text-center">
+                    直線管道
+                </button>
+                <button id="trackPresetCurved" onclick="changeTrackPreset('curved')" class="bg-cyan-500/20 border border-cyan-500 text-cyan-300 font-semibold py-1.5 rounded-md hover:bg-cyan-500/30 transition text-center">
+                    彎曲管道
+                </button>
+                <button id="trackPresetMaze" onclick="changeTrackPreset('maze')" class="bg-gray-800 border border-gray-700 text-gray-300 font-semibold py-1.5 rounded-md hover:bg-gray-700 transition text-center">
+                    管道飛躍
+                </button>
+            </div>
+        </div>
+
+        <!-- Camera Settings -->
         <div class="bg-gray-900/90 p-3 rounded-xl border border-gray-800">
-            <div class="text-xs font-bold uppercase tracking-wider text-cyan-400 mb-2">📹 Dynamic Camera</div>
+            <div class="text-xs font-bold uppercase tracking-wider text-cyan-400 mb-2">📹 動態攝影機模式</div>
             <div class="grid grid-cols-3 gap-1.5 text-xs">
                 <button id="camFollowBtn" onclick="setCameraMode('follow')" class="bg-cyan-500/20 border border-cyan-500 text-cyan-300 font-semibold py-1.5 rounded-md hover:bg-cyan-500/30 transition text-center">
-                    Follow Leader
+                    跟隨領先車
                 </button>
                 <button id="camTopBtn" onclick="setCameraMode('top')" class="bg-gray-800 border border-gray-700 text-gray-300 font-semibold py-1.5 rounded-md hover:bg-gray-700 transition text-center">
-                    Top View
+                    鳥瞰全景
                 </button>
                 <button id="camFreeBtn" onclick="setCameraMode('free')" class="bg-gray-800 border border-gray-700 text-gray-300 font-semibold py-1.5 rounded-md hover:bg-gray-700 transition text-center">
-                    Free Orbit
+                    自由視角
                 </button>
             </div>
         </div>
@@ -109,12 +125,12 @@
         <!-- Reinforcement Learning Hyperparameters -->
         <div class="bg-gray-900/90 p-3 rounded-xl border border-indigo-500/20 space-y-2">
             <div class="flex justify-between items-center">
-                <span class="text-xs font-bold uppercase tracking-wider text-indigo-400">🧠 Q-Learning AI Hyperparameters</span>
+                <span class="text-xs font-bold uppercase tracking-wider text-indigo-400">🧠 Q-Learning 超參數</span>
             </div>
             
             <div class="space-y-1">
                 <div class="flex justify-between text-xs text-gray-300">
-                    <span>Learning Rate (Alpha α):</span>
+                    <span>學習率 (Alpha α):</span>
                     <span id="alphaVal" class="font-mono text-cyan-400">0.25</span>
                 </div>
                 <input type="range" id="alphaRange" min="0.05" max="0.8" step="0.05" value="0.25" oninput="updateHyperparams()" class="w-full h-1.5 bg-gray-800 rounded-lg appearance-none cursor-pointer accent-cyan-400">
@@ -122,7 +138,7 @@
 
             <div class="space-y-1">
                 <div class="flex justify-between text-xs text-gray-300">
-                    <span>Exploration Rate (Epsilon ε):</span>
+                    <span>探索率 (Epsilon ε):</span>
                     <span id="epsVal" class="font-mono text-cyan-400">0.15</span>
                 </div>
                 <input type="range" id="epsRange" min="0.0" max="0.8" step="0.05" value="0.15" oninput="updateHyperparams()" class="w-full h-1.5 bg-gray-800 rounded-lg appearance-none cursor-pointer accent-cyan-400">
@@ -130,7 +146,7 @@
 
             <div class="space-y-1">
                 <div class="flex justify-between text-xs text-gray-300">
-                    <span>Discount Factor (Gamma γ):</span>
+                    <span>折扣因子 (Gamma γ):</span>
                     <span id="gammaVal" class="font-mono text-cyan-400">0.90</span>
                 </div>
                 <input type="range" id="gammaRange" min="0.5" max="0.99" step="0.01" value="0.90" oninput="updateHyperparams()" class="w-full h-1.5 bg-gray-800 rounded-lg appearance-none cursor-pointer accent-cyan-400">
@@ -138,21 +154,21 @@
 
             <div class="pt-2 flex gap-2">
                 <button onclick="saveBrain()" class="w-1/2 bg-indigo-600/30 hover:bg-indigo-600/50 border border-indigo-500/50 text-indigo-200 text-xs font-bold py-1.5 rounded-lg transition">
-                    💾 Save Brain
+                    💾 儲存大腦
                 </button>
                 <button onclick="resetBrain()" class="w-1/2 bg-red-600/30 hover:bg-red-600/50 border border-red-500/50 text-red-200 text-xs font-bold py-1.5 rounded-lg transition">
-                    🗑️ Reset Brain
+                    🗑️ 重置大腦
                 </button>
             </div>
         </div>
 
         <!-- Reward Shaping Sliders -->
         <div class="bg-gray-900/90 p-3 rounded-xl border border-emerald-500/20 space-y-2">
-            <div class="text-xs font-bold uppercase tracking-wider text-emerald-400">🎯 Reward Shaping</div>
+            <div class="text-xs font-bold uppercase tracking-wider text-emerald-400">🎯 獎勵機制設定 (Reward Shaping)</div>
             
             <div class="space-y-1">
                 <div class="flex justify-between text-xs text-gray-300">
-                    <span>Finish Line Reward:</span>
+                    <span>抵達終點獎勵:</span>
                     <span id="rewWinVal" class="font-mono text-emerald-400">1000</span>
                 </div>
                 <input type="range" id="rewWinRange" min="200" max="2000" step="100" value="1000" oninput="updateRewards()" class="w-full h-1.5 bg-gray-800 rounded-lg appearance-none cursor-pointer accent-emerald-400">
@@ -160,7 +176,7 @@
 
             <div class="space-y-1">
                 <div class="flex justify-between text-xs text-gray-300">
-                    <span>Fall/Crash Penalty:</span>
+                    <span>墜落/碰撞懲罰:</span>
                     <span id="rewCrashVal" class="font-mono text-red-400">-200</span>
                 </div>
                 <input type="range" id="rewCrashRange" min="-500" max="-50" step="25" value="-200" oninput="updateRewards()" class="w-full h-1.5 bg-gray-800 rounded-lg appearance-none cursor-pointer accent-red-400">
@@ -168,7 +184,7 @@
 
             <div class="space-y-1">
                 <div class="flex justify-between text-xs text-gray-300">
-                    <span>Forward Progress Weight:</span>
+                    <span>向前推進權重:</span>
                     <span id="rewProgressVal" class="font-mono text-emerald-400">2.0</span>
                 </div>
                 <input type="range" id="rewProgressRange" min="0.5" max="5.0" step="0.5" value="2.0" oninput="updateRewards()" class="w-full h-1.5 bg-gray-800 rounded-lg appearance-none cursor-pointer accent-emerald-400">
@@ -178,7 +194,7 @@
         <!-- Agent Count Slider -->
         <div class="bg-gray-900/90 p-3 rounded-xl border border-gray-800 space-y-1">
             <div class="flex justify-between text-xs text-gray-300 font-bold">
-                <span class="text-amber-400">🏎️ Active Cars Count:</span>
+                <span class="text-amber-400">🏎️ 同時訓練賽車數量:</span>
                 <span id="carCountVal" class="font-mono text-amber-400">60</span>
             </div>
             <input type="range" id="carCountRange" min="10" max="300" step="10" value="60" onchange="changeCarCount(this.value)" class="w-full h-1.5 bg-gray-800 rounded-lg appearance-none cursor-pointer accent-amber-400">
@@ -187,24 +203,24 @@
         <!-- Real-Time Generation Performance Chart -->
         <div class="bg-gray-900/90 p-3 rounded-xl border border-gray-800 flex flex-col gap-2">
             <div class="text-[11px] font-bold text-gray-300 uppercase tracking-wider flex justify-between">
-                <span>📊 Generation Score History</span>
-                <span class="text-cyan-400 text-[10px]">Avg vs Peak</span>
+                <span>📊 強化學習每世代得分表現</span>
+                <span class="text-cyan-400 text-[10px]">平均 vs 最高分</span>
             </div>
             <canvas id="chartCanvas" width="280" height="95" class="w-full h-24 bg-gray-950 rounded-lg border border-gray-800/80"></canvas>
         </div>
 
-        <!-- Statistics Stats Box -->
+        <!-- Statistics Box -->
         <div class="bg-gray-900/90 p-3 rounded-xl border border-gray-800 text-xs space-y-1.5">
             <div class="flex justify-between text-gray-400">
-                <span>Total Generations/Episodes:</span>
+                <span>累積訓練世代 (Episodes):</span>
                 <span id="statEpisodes" class="font-mono font-bold text-gray-200">0</span>
             </div>
             <div class="flex justify-between text-gray-400">
-                <span>Highest Score Ever:</span>
+                <span>歷史最高分:</span>
                 <span id="statHighScore" class="font-mono font-bold text-emerald-400">0</span>
             </div>
             <div class="flex justify-between text-gray-400">
-                <span>Learned Q-States in Memory:</span>
+                <span>已學習 Q-States 記憶數:</span>
                 <span id="statQStates" class="font-mono font-bold text-cyan-400">0</span>
             </div>
         </div>
@@ -213,19 +229,20 @@
 
     <!-- Notification Toast -->
     <div id="toast" class="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 bg-cyan-900/90 border border-cyan-400 text-cyan-100 text-xs font-semibold px-4 py-2 rounded-xl opacity-0 transition-opacity duration-300 pointer-events-none shadow-xl">
-        Brain Saved Successfully!
+        AI 大腦儲存成功！
     </div>
 
     <!-- MAIN SIMULATION SCRIPT -->
     <script>
         // --- GLOBALS & CONFIGURATION ---
         let scene, camera, renderer, controls;
-        let pipeMesh, pipeCurve, pipePathPoints = [];
+        let pipeMesh, pipeCurve, finishRing;
         let cars = [];
         let numCars = 60;
         let isPaused = false;
         let isFastSim = true;
         let cameraMode = 'follow'; // 'follow', 'top', 'free'
+        let currentPreset = 'curved'; // 'straight', 'curved', 'maze'
         
         // Hyperparameters & Reward Constants
         let ALPHA = 0.25;
@@ -245,7 +262,6 @@
         const PIPE_RADIUS = 11;
         const PIPE_LENGTH_SEGMENTS = 180;
         const PIPE_RADIAL_SEGMENTS = 24;
-        let pipeCurvePoints = [];
 
         // FPS Stats
         let lastTime = performance.now();
@@ -278,7 +294,7 @@
             controls.dampingFactor = 0.05;
             controls.maxDistance = 300;
 
-            // Ambient & Directional Lights
+            // Lights
             const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
             scene.add(ambientLight);
 
@@ -293,8 +309,8 @@
             pointLight.position.set(0, 0, 0);
             scene.add(pointLight);
 
-            // Build 3D Pipe Track
-            createPipeTrack();
+            // Build Initial 3D Pipe Track Preset
+            createPipeTrack(currentPreset);
 
             // Spawn AI Cars
             spawnCars();
@@ -304,20 +320,37 @@
         }
 
         // --- 2. 3D PIPE TRACK CREATION ---
-        function createPipeTrack() {
-            // Generate a curving 3D spline curve for the pipe path
+        function createPipeTrack(preset) {
+            if (pipeMesh) scene.remove(pipeMesh);
+            if (finishRing) scene.remove(finishRing);
+
             const points = [];
-            const numPathPoints = 12;
-            for (let i = 0; i <= numPathPoints; i++) {
-                const t = i / numPathPoints;
-                const z = t * 450;
-                const x = Math.sin(t * Math.PI * 3) * 35;
-                const y = Math.cos(t * Math.PI * 2) * 20;
-                points.push(new THREE.Vector3(x, y, z));
+            
+            if (preset === 'straight') {
+                for (let i = 0; i <= 10; i++) {
+                    points.push(new THREE.Vector3(0, 0, i * 45));
+                }
+            } else if (preset === 'maze') {
+                const numPathPoints = 12;
+                for (let i = 0; i <= numPathPoints; i++) {
+                    const t = i / numPathPoints;
+                    const z = t * 450;
+                    const x = Math.sin(t * Math.PI * 4) * 45;
+                    const y = Math.sin(t * Math.PI * 3) * 30;
+                    points.push(new THREE.Vector3(x, y, z));
+                }
+            } else { // 'curved' default
+                const numPathPoints = 12;
+                for (let i = 0; i <= numPathPoints; i++) {
+                    const t = i / numPathPoints;
+                    const z = t * 450;
+                    const x = Math.sin(t * Math.PI * 2.5) * 35;
+                    const y = Math.cos(t * Math.PI * 2) * 20;
+                    points.push(new THREE.Vector3(x, y, z));
+                }
             }
 
             pipeCurve = new THREE.CatmullRomCurve3(points);
-            pipePathPoints = pipeCurve.getPoints(PIPE_LENGTH_SEGMENTS);
 
             // Pipe Tube Geometry
             const tubeGeometry = new THREE.TubeGeometry(
@@ -328,30 +361,40 @@
                 false
             );
 
-            // Pipe Wireframe / Grid Material
+            // Pipe Wireframe / Cyberpunk Material
             const tubeMaterial = new THREE.MeshStandardMaterial({
                 color: 0x0f172a,
                 roughness: 0.2,
                 metalness: 0.8,
                 wireframe: true,
                 transparent: true,
-                opacity: 0.45,
-                emissive: 0x0284c7,
-                emissiveIntensity: 0.2
+                opacity: 0.5,
+                emissive: preset === 'maze' ? 0x9333ea : 0x0284c7,
+                emissiveIntensity: 0.25
             });
 
             pipeMesh = new THREE.Mesh(tubeGeometry, tubeMaterial);
             scene.add(pipeMesh);
 
-            // Add Neon Ring Marker at Finish Line
-            const finishPos = pipePathPoints[pipePathPoints.length - 1];
+            // Finish Line Marker
+            const finishPos = pipeCurve.getPointAt(1.0);
             const finishTangent = pipeCurve.getTangentAt(1.0);
-            const ringGeo = new THREE.TorusGeometry(PIPE_RADIUS, 0.6, 16, 32);
+            const ringGeo = new THREE.TorusGeometry(PIPE_RADIUS, 0.7, 16, 32);
             const ringMat = new THREE.MeshBasicMaterial({ color: 0x10b981 });
-            const finishRing = new THREE.Mesh(ringGeo, ringMat);
+            finishRing = new THREE.Mesh(ringGeo, ringMat);
             finishRing.position.copy(finishPos);
             finishRing.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), finishTangent);
             scene.add(finishRing);
+        }
+
+        function changeTrackPreset(preset) {
+            currentPreset = preset;
+            document.getElementById('trackPresetStraight').className = preset === 'straight' ? 'bg-purple-500/20 border border-purple-500 text-purple-300 font-semibold py-1.5 rounded-md text-center' : 'bg-gray-800 border border-gray-700 text-gray-300 font-semibold py-1.5 rounded-md text-center';
+            document.getElementById('trackPresetCurved').className = preset === 'curved' ? 'bg-cyan-500/20 border border-cyan-500 text-cyan-300 font-semibold py-1.5 rounded-md text-center' : 'bg-gray-800 border border-gray-700 text-gray-300 font-semibold py-1.5 rounded-md text-center';
+            document.getElementById('trackPresetMaze').className = preset === 'maze' ? 'bg-purple-500/20 border border-purple-500 text-purple-300 font-semibold py-1.5 rounded-md text-center' : 'bg-gray-800 border border-gray-700 text-gray-300 font-semibold py-1.5 rounded-md text-center';
+
+            createPipeTrack(preset);
+            cars.forEach(c => c.reset());
         }
 
         // --- 3. AI CAR CLASS WITH RAYCASTING & MOVEMENT ---
@@ -361,7 +404,6 @@
                 this.mesh = this.createCarMesh();
                 scene.add(this.mesh);
 
-                // Laser Sensor Visuals
                 this.numSensors = 5;
                 this.sensorLines = [];
                 this.createSensorVisuals();
@@ -372,7 +414,7 @@
             createCarMesh() {
                 const group = new THREE.Group();
 
-                // Car Chassis
+                // Chassis
                 const bodyGeo = new THREE.BoxGeometry(1.6, 0.8, 3.2);
                 const colorHex = Math.random() > 0.3 ? 0x38bdf8 : (Math.random() > 0.5 ? 0xec4899 : 0xfacc15);
                 const bodyMat = new THREE.MeshStandardMaterial({
@@ -392,6 +434,16 @@
                 const roof = new THREE.Mesh(roofGeo, roofMat);
                 roof.position.set(0, 0.6, -0.2);
                 group.add(roof);
+
+                // Headlights
+                const lightGeo = new THREE.SphereGeometry(0.2, 8, 8);
+                const lightMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8 });
+                const leftLight = new THREE.Mesh(lightGeo, lightMat);
+                leftLight.position.set(-0.5, 0.1, 1.6);
+                const rightLight = new THREE.Mesh(lightGeo, lightMat);
+                rightLight.position.set(0.5, 0.1, 1.6);
+                group.add(leftLight);
+                group.add(rightLight);
 
                 // Wheels
                 const wheelGeo = new THREE.CylinderGeometry(0.4, 0.4, 0.3, 12);
@@ -425,9 +477,9 @@
             }
 
             reset() {
-                this.pathProgress = 0.002; // Distance t along pipe spline [0, 1]
-                this.angleOnPipe = Math.random() * Math.PI * 2; // Angle around pipe inner wall
-                this.speed = 0.001; // Speed along curve
+                this.pathProgress = 0.002; // Position t along pipe spline [0, 1]
+                this.angleOnPipe = Math.random() * Math.PI * 2; // Surface angle around pipe inner wall
+                this.speed = 0.0012; // Forward speed
                 this.angularVelocity = 0;
                 
                 this.isAlive = true;
@@ -440,20 +492,19 @@
                 this.update3DPosition();
             }
 
-            // Calculate position inside the pipe tube inner surface
             update3DPosition() {
                 if (!pipeCurve) return;
 
                 const centerPos = pipeCurve.getPointAt(Math.min(1.0, Math.max(0.0, this.pathProgress)));
                 const tangent = pipeCurve.getTangentAt(Math.min(1.0, Math.max(0.0, this.pathProgress)));
 
-                // Construct Local Frame (Normal, Binormal, Tangent)
+                // Local Coordinate Frame (Normal, Binormal, Tangent)
                 const normal = new THREE.Vector3(0, 1, 0);
                 const binormal = new THREE.Vector3().crossVectors(tangent, normal).normalize();
                 const adjustedNormal = new THREE.Vector3().crossVectors(binormal, tangent).normalize();
 
-                // Inner wall surface vector offset
-                const r = PIPE_RADIUS - 0.8; // Car distance from central axis
+                // Inner pipe surface wall vector offset
+                const r = PIPE_RADIUS - 0.8;
                 const offsetX = Math.cos(this.angleOnPipe) * r;
                 const offsetY = Math.sin(this.angleOnPipe) * r;
 
@@ -464,30 +515,27 @@
 
                 this.mesh.position.copy(carPos);
 
-                // Align car orientation with pipe path & inner curve rotation
+                // Orientation alignment
                 const lookTarget = pipeCurve.getPointAt(Math.min(1.0, this.pathProgress + 0.005));
                 this.mesh.lookAt(lookTarget);
                 this.mesh.rotateZ(this.angleOnPipe + Math.PI / 2);
             }
 
-            // Emit Raycasts to sense pipe wall distances
             getSensors() {
-                // Return discretized wall clearance distances: [Left, Front-Left, Front, Front-Right, Right]
                 const sensorDistances = [];
                 const angles = [-1.1, -0.5, 0, 0.5, 1.1];
 
                 for (let i = 0; i < this.numSensors; i++) {
                     const testAngle = this.angleOnPipe + angles[i];
-                    // Measure boundary angle offset relative to bottom/top of pipe
                     const distToLimit = Math.abs(Math.sin(testAngle));
                     
-                    let discreteVal = 2; // Clear
-                    if (distToLimit > 0.85) discreteVal = 0; // Danger close
-                    else if (distToLimit > 0.6) discreteVal = 1; // Warning
+                    let discreteVal = 2; // Safe clearance
+                    if (distToLimit > 0.88) discreteVal = 0; // Hazard zone
+                    else if (distToLimit > 0.65) discreteVal = 1; // Caution zone
 
                     sensorDistances.push(discreteVal);
 
-                    // Update sensor line visual graphics
+                    // Update sensor visual raycasts
                     const p1 = this.mesh.position;
                     const rayDir = new THREE.Vector3(Math.cos(testAngle), Math.sin(testAngle), 0.5).normalize();
                     const p2 = new THREE.Vector3().copy(p1).addScaledVector(rayDir, 8);
@@ -532,21 +580,21 @@
                 const stateKey = this.getStateKey();
                 const action = this.chooseAction(stateKey);
 
-                // Execute selected action
-                if (action === 0) this.angularVelocity -= 0.035; // Steer Left inside pipe
-                else if (action === 1) this.angularVelocity += 0.035; // Steer Right inside pipe
-                else if (action === 2) this.speed = Math.min(0.0035, this.speed + 0.00015); // Accelerate
-                else if (action === 3) this.speed = Math.max(0.0005, this.speed - 0.0002); // Brake
+                // Execute Q-Action
+                if (action === 0) this.angularVelocity -= 0.038;
+                else if (action === 1) this.angularVelocity += 0.038;
+                else if (action === 2) this.speed = Math.min(0.0035, this.speed + 0.00015);
+                else if (action === 3) this.speed = Math.max(0.0005, this.speed - 0.0002);
 
-                // Physics update
-                this.angularVelocity *= 0.88; // Steering friction
+                // Dynamics update
+                this.angularVelocity *= 0.88;
                 this.angleOnPipe += this.angularVelocity;
                 this.pathProgress += this.speed;
 
-                // Update 3D Transform
+                // Position calculation
                 this.update3DPosition();
 
-                // Check Fall off / Excessive G-force Crash
+                // Check Wall Crash/Fall-off
                 let crashed = false;
                 if (Math.abs(Math.sin(this.angleOnPipe)) > 0.96) {
                     crashed = true;
@@ -558,7 +606,7 @@
                     this.hasFinished = true;
                 }
 
-                // Calculate Reward
+                // Reward Calculation
                 let reward = 0;
                 if (crashed) {
                     reward = REW_CRASH;
@@ -570,7 +618,7 @@
 
                 this.totalReward += reward;
 
-                // Q-Learning Bellman Equation Update
+                // Q-Learning Update Formula
                 const nextStateKey = this.getStateKey();
                 if (this.lastStateKey !== null && this.lastAction !== null) {
                     if (!qTable[this.lastStateKey]) qTable[this.lastStateKey] = { 0: 0, 1: 0, 2: 0, 3: 0 };
@@ -614,7 +662,6 @@
             const ticks = isFastSim ? 4 : 1;
             for (let t = 0; t < ticks; t++) {
                 let aliveCount = 0;
-                let leader = getLeadingCar();
 
                 for (let car of cars) {
                     if (car.isAlive && !car.hasFinished) {
@@ -623,7 +670,7 @@
                     }
                 }
 
-                // If all cars crashed or finished -> Trigger Next Generation / Episode
+                // If all cars died or finished -> Trigger Next Generation
                 if (aliveCount === 0) {
                     totalEpisodes++;
 
@@ -636,7 +683,6 @@
                     episodeHistory.push({ avg: avgScore, max: maxScore });
                     if (episodeHistory.length > 30) episodeHistory.shift();
 
-                    // Respawn population with shared memory
                     cars.forEach(c => c.reset());
                 }
             }
@@ -655,7 +701,7 @@
             return leader;
         }
 
-        // --- 5. CAMERA CONTROLS & HUD UPDATING ---
+        // --- 5. CAMERA CONTROLS & HUD ---
         function updateCamera() {
             const leader = getLeadingCar();
 
@@ -663,14 +709,14 @@
                 const carPos = leader.mesh.position;
                 const targetCamPos = new THREE.Vector3()
                     .copy(carPos)
-                    .add(new THREE.Vector3(0, 10, -18));
+                    .add(new THREE.Vector3(0, 12, -20));
 
                 camera.position.lerp(targetCamPos, 0.1);
                 controls.target.lerp(carPos, 0.1);
                 controls.update();
             } else if (cameraMode === 'top') {
                 const centerPos = pipeCurve.getPointAt(0.5);
-                camera.position.set(centerPos.x, centerPos.y + 120, centerPos.z);
+                camera.position.set(centerPos.x, centerPos.y + 130, centerPos.z);
                 controls.target.copy(centerPos);
                 controls.update();
             } else {
@@ -707,7 +753,7 @@
             if (episodeHistory.length === 0) {
                 ctx.fillStyle = "#6b7280";
                 ctx.font = "11px sans-serif";
-                ctx.fillText("Awaiting generation completion...", 15, 50);
+                ctx.fillText("等待首個世代訓練完成...", 15, 50);
                 return;
             }
 
@@ -720,7 +766,7 @@
             const barWidth = Math.max(4, (w - 30) / episodeHistory.length - 3);
             const zeroY = h - 12 - ((0 - minVal) / range) * (h - 24);
 
-            // Zero Line
+            // Zero Axis Line
             ctx.strokeStyle = "#374151";
             ctx.beginPath();
             ctx.moveTo(10, zeroY);
@@ -746,13 +792,13 @@
         // --- 7. CONTROLS & HYPERPARAMETER HANDLERS ---
         function togglePause() {
             isPaused = !isPaused;
-            document.getElementById('pauseBtn').innerText = isPaused ? "▶️ Resume" : "⏸️ Pause";
+            document.getElementById('pauseBtn').innerText = isPaused ? "▶️ 繼續" : "⏸️ 暫停";
         }
 
         function toggleFastSim() {
             isFastSim = !isFastSim;
             const btn = document.getElementById('fastSimBtn');
-            btn.innerText = isFastSim ? "🚀 Fast Sim (4x)" : "🐢 Normal (1x)";
+            btn.innerText = isFastSim ? "🚀 加速模擬 (4x)" : "🐢 正常速度 (1x)";
             btn.className = isFastSim 
                 ? "bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold py-2 px-3 rounded-lg transition-all shadow-lg shadow-cyan-950"
                 : "bg-gray-800 hover:bg-gray-700 text-gray-200 text-xs font-bold py-2 px-3 rounded-lg transition-all";
@@ -780,7 +826,7 @@
 
         function saveBrain() {
             localStorage.setItem('pipe_ai_qtable', JSON.stringify(qTable));
-            showToast("💾 Q-Learning Brain Saved to Storage!");
+            showToast("💾 Q-Learning 大腦數據已儲存！");
         }
 
         function resetBrain() {
@@ -790,7 +836,7 @@
             highScore = 0;
             episodeHistory = [];
             cars.forEach(c => c.reset());
-            showToast("🗑️ Brain Memory Reset!");
+            showToast("🗑️ 大腦記憶已成功重置！");
         }
 
         function showToast(msg) {
@@ -823,7 +869,7 @@
             // Update Physics & AI Logic
             updateSimulation();
 
-            // Render Chart & 3D Scene
+            // Render Analytics & 3D Scene
             renderChart();
             renderer.render(scene, camera);
         }
