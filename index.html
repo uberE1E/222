@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>極速 Q-Learning AI 共享大腦演化模擬器</title>
+    <title>極速 Q-Learning AI 全員即時學習與演化模擬器</title>
     <style>
         * { box-sizing: border-box; }
         body {
@@ -153,16 +153,16 @@
 </head>
 <body>
 
-    <h1>🏎️ 極速 Q-Learning AI 共享大腦演化模擬器</h1>
+    <h1>🏎️ 極速 Q-Learning AI 全員即時學習模擬器</h1>
 
     <div id="mainContainer">
         <div id="leftPanel">
             <div id="canvasWrapper">
                 <canvas id="simCanvas" width="850" height="460"></canvas>
             </div>
-            <!-- 每輪 5 台車結果柱狀圖區 -->
+            <!-- 每 10 台車為一輪的柱狀圖區 -->
             <div id="chartBox">
-                <h3>📊 每輪 (5台車/一柱) 演化得分柱狀圖 (藍色: 平均得分 | 綠色: 最高得分)</h3>
+                <h3>📊 每輪 (10台車/一柱) 演化得分柱狀圖 (藍色: 平均得分 | 綠色: 最高得分)</h3>
                 <canvas id="statsCanvas" width="850" height="140"></canvas>
             </div>
         </div>
@@ -225,14 +225,14 @@
             <div class="panel-section">
                 <h3>🚗 車輛與 AI 設定</h3>
                 <div class="slider-group">
-                    <label>同時在場賽車數 (5台為1輪): <span id="agentCountTxt" class="stat-val">100</span> 輛</label>
-                    <input type="range" id="agentCountRange" min="5" max="1000" step="5" value="100" oninput="updateAgentCount(this.value)">
+                    <label>同時在場賽車數 (10台為1輪): <span id="agentCountTxt" class="stat-val">100</span> 輛</label>
+                    <input type="range" id="agentCountRange" min="10" max="5000" step="10" value="100" oninput="updateAgentCount(this.value)">
                 </div>
             </div>
 
             <!-- 超參數與記憶存取 -->
             <div class="panel-section">
-                <h3>🧠 Q-Learning 超參數 (共享大腦)</h3>
+                <h3>🧠 Q-Learning 超參數 (全車即時學習)</h3>
                 <div class="slider-group">
                     <label>學習率 (Alpha): <span id="alphaTxt">0.25</span></label>
                     <input type="range" id="alphaRange" min="0.05" max="0.8" step="0.05" value="0.25">
@@ -262,7 +262,7 @@
             </div>
 
             <div class="instructions">
-                <strong>💡 說明：</strong> 每 5 台車算一輪 Episode，完成即在地圖上記錄柱狀圖並學習最佳策略。學習結果自動永久保存在瀏覽器中。
+                <strong>💡 說明：</strong> 每台車隨時隨地都在邊跑邊學習。每累積滿 10 台車陣亡或抵達終點，即算完成一輪並在下方長出柱狀圖！
             </div>
         </div>
     </div>
@@ -325,10 +325,11 @@
         let totalEpisodes = 0;
         let globalMaxScore = -9999;
         
-        // **共享大腦 Q-Table**
-        let qTable = JSON.parse(localStorage.getItem("q_shared_brain")) || {};
-        let groups = []; // 儲存每 5 台車組成的 Group
-        let episodeHistory = []; // 歷史每輪 (5台車) 的資料 [{avgScore, maxScore}]
+        // **共用大腦 Q-Table (每一台車都在讀取並即時寫入這個大腦)**
+        let qTable = JSON.parse(localStorage.getItem("q_trackmania_brain")) || {};
+        let cars = [];
+        let episodeHistory = []; // 歷史每輪 (10台車結算一次) 資料 [{avgScore, maxScore}]
+        let finishedPool = []; // 收集每一輪剛結束的車，滿 10 台就結算一輪
 
         function showToast(msg) {
             toastMsg.innerText = msg;
@@ -336,16 +337,17 @@
         }
 
         function saveBrain(manual = false) {
-            localStorage.setItem("q_shared_brain", JSON.stringify(qTable));
-            if (manual) showToast("✅ AI 共享大腦已手動儲存！");
+            localStorage.setItem("q_trackmania_brain", JSON.stringify(qTable));
+            if (manual) showToast("✅ AI 共用大腦已手動儲存！");
         }
 
         function clearBrain() {
             qTable = {};
-            localStorage.removeItem("q_shared_brain");
+            localStorage.removeItem("q_trackmania_brain");
             totalEpisodes = 0;
             globalMaxScore = -9999;
             episodeHistory = [];
+            finishedPool = [];
             resetSimulation();
             showToast("🗑️ 已清空 AI 大腦記憶！");
         }
@@ -442,9 +444,9 @@
             }
 
             reset() {
-                this.x = startPoint.x;
-                this.y = startPoint.y;
-                this.angle = startPoint.angle;
+                this.x = startPoint.x + (Math.random() * 20 - 10);
+                this.y = startPoint.y + (Math.random() * 20 - 10);
+                this.angle = startPoint.angle + (Math.random() * 0.1 - 0.05);
                 this.speed = 0;
                 this.maxSpeed = 4.8;
                 this.radius = 9;
@@ -540,11 +542,29 @@
                     let oldQ = qTable[this.lastStateKey][this.lastAction];
                     let maxNextQ = Math.max(...Object.values(qTable[nextState]));
                     
-                    // 更新至共享大腦 Q-Table
+                    // **每台車隨時都在即時更新共用大腦 Q-Table**
                     qTable[this.lastStateKey][this.lastAction] = oldQ + ALPHA * (reward + GAMMA * maxNextQ - oldQ);
                 }
                 this.lastStateKey = stateKey;
                 this.lastAction = action;
+
+                // 當車輛陣亡或抵達終點，放入結算池，並立即在起點原地復活繼續學習下一輪
+                if (!this.isAlive || this.hasWon) {
+                    finishedPool.push(this.totalScore);
+                    if (finishedPool.length >= 10) {
+                        totalEpisodes++;
+                        let avgScore = finishedPool.reduce((a, b) => a + b, 0) / 10;
+                        let maxScore = Math.max(...finishedPool);
+                        if (maxScore > globalMaxScore) globalMaxScore = maxScore;
+
+                        episodeHistory.push({ avgScore, maxScore });
+                        if (episodeHistory.length > 35) episodeHistory.shift();
+
+                        finishedPool = [];
+                        saveBrain(false);
+                    }
+                    this.reset();
+                }
             }
 
             draw() {
@@ -563,46 +583,6 @@
             }
         }
 
-        // 5 台車作為一個小隊 / 一輪 (Group)
-        class CarGroup {
-            constructor() {
-                this.cars = [new Car(), new Car(), new Car(), new Car(), new Car()];
-            }
-
-            update() {
-                let aliveInGroup = 0;
-                for (let car of this.cars) {
-                    if (car.isAlive && !car.hasWon) {
-                        car.update();
-                        aliveInGroup++;
-                    }
-                }
-                
-                // 此 5 台車的一輪已經全數結束 -> 進行結算並重置
-                if (aliveInGroup === 0) {
-                    totalEpisodes++;
-                    let scores = this.cars.map(c => c.totalScore);
-                    let avgScore = scores.reduce((a, b) => a + b, 0) / 5;
-                    let maxScore = Math.max(...scores);
-                    if (maxScore > globalMaxScore) globalMaxScore = maxScore;
-
-                    // 記錄到歷史圖表
-                    episodeHistory.push({ avgScore, maxScore });
-                    if (episodeHistory.length > 35) episodeHistory.shift();
-
-                    // 自動儲存至 localStorage
-                    saveBrain(false);
-
-                    // 原地重置此 5 台車進入下一輪
-                    for (let car of this.cars) car.reset();
-                }
-            }
-
-            draw() {
-                for (let car of this.cars) car.draw();
-            }
-        }
-
         function updateAgentCount(val) {
             numAgents = parseInt(val);
             document.getElementById("agentCountTxt").innerText = numAgents;
@@ -610,22 +590,21 @@
         }
 
         function resetSimulation() {
-            groups = [];
-            let numGroups = Math.ceil(numAgents / 5);
-            for (let i = 0; i < numGroups; i++) {
-                groups.push(new CarGroup());
+            cars = [];
+            for (let i = 0; i < numAgents; i++) {
+                cars.push(new Car());
             }
+            finishedPool = [];
         }
 
         loadPresetTrack();
 
-        // **渲染 5 台車一輪的柱狀圖**
         function renderBarChart() {
             statsCtx.clearRect(0, 0, statsCanvas.width, statsCanvas.height);
             if (episodeHistory.length === 0) {
                 statsCtx.fillStyle = "#666";
                 statsCtx.font = "12px sans-serif";
-                statsCtx.fillText("等待第 1 輪 (5台車) 模擬完成...", 20, 75);
+                statsCtx.fillText("等待累積滿 10 台車次完成一輪...", 20, 75);
                 return;
             }
 
@@ -640,7 +619,6 @@
 
             let zeroY = h - 20 - ((0 - minVal) / range) * (h - 40);
 
-            // 繪製 0 分基準線
             statsCtx.strokeStyle = "#444";
             statsCtx.lineWidth = 1;
             statsCtx.beginPath();
@@ -651,13 +629,11 @@
             episodeHistory.forEach((ep, i) => {
                 let x = 30 + i * (barWidth + barGap);
 
-                // 1. 繪製最高得分柱 (綠色，稍寬)
                 let maxH = ((ep.maxScore - 0) / range) * (h - 40);
                 let maxY = zeroY - maxH;
                 statsCtx.fillStyle = "rgba(46, 204, 113, 0.85)";
                 statsCtx.fillRect(x, Math.min(zeroY, maxY), barWidth, Math.abs(maxH));
 
-                // 2. 繪製平均得分柱 (藍色，稍微窄一點並覆蓋於中央)
                 let avgH = ((ep.avgScore - 0) / range) * (h - 40);
                 let avgY = zeroY - avgH;
                 statsCtx.fillStyle = "rgba(52, 152, 219, 0.9)";
@@ -668,7 +644,6 @@
         function renderScene() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // 終點與起點
             ctx.fillStyle = "#27ae60";
             ctx.fillRect(finishArea.x, finishArea.y, finishArea.w, finishArea.h);
             ctx.fillStyle = "#fff"; ctx.font = "bold 13px sans-serif";
@@ -677,22 +652,21 @@
             ctx.fillStyle = "rgba(52, 152, 219, 0.4)";
             ctx.beginPath(); ctx.arc(startPoint.x, startPoint.y, 18, 0, Math.PI*2); ctx.fill();
 
-            // 牆壁
             ctx.strokeStyle = "#e74c3c"; ctx.lineWidth = 5; ctx.lineCap = "round";
             for (let w of walls) {
                 ctx.beginPath(); ctx.moveTo(w.x1, w.y1); ctx.lineTo(w.x2, w.y2); ctx.stroke();
             }
 
             let totalAlive = 0;
-            for (let group of groups) {
-                group.draw();
-                for (let car of group.cars) {
-                    if (car.isAlive && !car.hasWon) totalAlive++;
+            for (let car of cars) {
+                if (car.isAlive && !car.hasWon) {
+                    totalAlive++;
+                    car.draw();
                 }
             }
 
             episodesValEl.innerText = totalEpisodes;
-            aliveValEl.innerText = `${totalAlive} / ${groups.length * 5}`;
+            aliveValEl.innerText = `${totalAlive} / ${numAgents}`;
             topScoreValEl.innerText = globalMaxScore > -9000 ? Math.round(globalMaxScore) : 0;
             qStatesValEl.innerText = Object.keys(qTable).length;
 
@@ -703,8 +677,8 @@
             if (!isPaused) {
                 let iterations = isDualSimActive ? 4 : 1;
                 for (let it = 0; it < iterations; it++) {
-                    for (let group of groups) {
-                        group.update();
+                    for (let car of cars) {
+                        car.update();
                     }
                 }
             }
