@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI 智慧修圖、優化與腦補圖模擬器</title>
+    <title>OpenFront: 領土爭奪戰 (Territory Wars)</title>
     <style>
         * { box-sizing: border-box; }
         body {
@@ -16,378 +16,320 @@
             align-items: center;
             justify-content: center;
             min-height: 100vh;
-            overflow-x: hidden;
+            overflow: hidden;
             user-select: none;
-            padding: 10px 0;
         }
         h1 {
-            margin: 4px 0;
+            margin: 5px 0;
             font-size: 22px;
             color: #58a6ff;
             text-shadow: 0 0 10px rgba(88, 166, 255, 0.4);
         }
         .subtitle {
-            font-size: 11px;
+            font-size: 12px;
             color: #8b949e;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
         }
         #mainContainer {
             display: flex;
             gap: 15px;
             align-items: flex-start;
         }
-        #canvasWrapper {
-            position: relative;
-            background: #161b22;
-            border: 2px solid #30363d;
-            border-radius: 8px;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.6);
-            overflow: hidden;
-        }
         canvas {
-            display: block;
-            cursor: crosshair;
+            border: 3px solid #30363d;
+            background-color: #161b22;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+            border-radius: 8px;
+            cursor: pointer;
         }
         #controlPanel {
-            width: 300px;
+            width: 240px;
             background: #161b22;
             border: 1px solid #30363d;
             border-radius: 8px;
-            padding: 12px;
+            padding: 15px;
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 12px;
             box-shadow: 0 4px 20px rgba(0,0,0,0.5);
         }
         .panel-section {
             background: #21262d;
-            padding: 8px 10px;
+            padding: 10px;
             border-radius: 6px;
             border-left: 4px solid #58a6ff;
         }
-        .panel-section.ai-mode { border-left-color: #a371f7; }
         .panel-section h3 {
-            margin: 0 0 6px 0;
+            margin: 0 0 8px 0;
             font-size: 13px;
-            color: #f0f6fc;
+            color: #fff;
+        }
+        .stat-row {
             display: flex;
             justify-content: space-between;
-            align-items: center;
+            font-size: 12px;
+            margin-bottom: 6px;
+            color: #8b949e;
         }
-        .btn-group {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 6px;
-            margin-top: 4px;
-        }
+        .stat-val { font-weight: bold; color: #58a6ff; }
         button {
             background-color: #238636;
             color: white;
             border: none;
-            padding: 6px 8px;
-            border-radius: 4px;
-            font-size: 11px;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 12px;
             font-weight: bold;
             cursor: pointer;
-            transition: all 0.2s;
+            width: 100%;
+            transition: background 0.2s;
         }
-        button:hover { background-color: #2ea043; transform: translateY(-1px); }
-        button.secondary { background-color: #30363d; }
-        button.secondary:hover { background-color: #484f58; }
-        button.purple { background-color: #8957e5; }
-        button.purple:hover { background-color: #a371f7; }
-        
-        .slider-group {
-            display: flex;
-            flex-direction: column;
-            gap: 2px;
-            font-size: 11px;
-            margin-top: 4px;
-            color: #8b949e;
-        }
-        input[type="range"] { width: 100%; accent-color: #a371f7; }
-        
-        /* AI 運算進度條遮罩 */
-        #loadingOverlay {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(13, 17, 23, 0.85);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-            color: #a371f7;
-            font-weight: bold;
-            font-size: 14px;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.3s;
-        }
-        #loadingOverlay.active { opacity: 1; pointer-events: auto; }
-        .spinner {
-            width: 40px; height: 40px;
-            border: 4px solid #30363d;
-            border-top: 4px solid #a371f7;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-
+        button:hover { background-color: #2ea043; }
+        button.secondary { background-color: #da3633; }
+        button.secondary:hover { background-color: #f85149; }
         .instructions {
-            font-size: 10px;
+            font-size: 11px;
             color: #8b949e;
-            line-height: 1.3;
+            line-height: 1.4;
             background: #0d1117;
-            padding: 6px;
+            padding: 8px;
             border-radius: 4px;
         }
     </style>
 </head>
 <body>
 
-    <h1>🧠 AI 智慧修圖、優化與腦補模擬器</h1>
-    <div class="subtitle">體驗神經網路超解析度升頻、語意修補 (Inpainting) 與擴散模型降噪生成</div>
+    <h1>🌐 OpenFront: 領土爭奪戰</h1>
+    <div class="subtitle">佔領據點、調度大軍、擊敗紅色敵方勢力！</div>
 
     <div id="mainContainer">
-        <div id="canvasWrapper">
-            <canvas id="imageCanvas" width="500" height="400"></canvas>
-            <div id="loadingOverlay">
-                <div class="spinner"></div>
-                <div id="loadingText">AI 正在腦補生成細節 (Diffusion Step 1/20)...</div>
-            </div>
-        </div>
+        <canvas id="gameCanvas" width="700" height="500"></canvas>
 
         <div id="controlPanel">
-            <!-- 來源圖片選擇 -->
             <div class="panel-section">
-                <h3>🖼️ 選擇測試圖片</h3>
-                <div class="btn-group">
-                    <button class="secondary" onclick="loadSampleImage('portrait')">👤 人像範例</button>
-                    <button class="secondary" onclick="loadSampleImage('landscape')">🌄 風景範例</button>
-                </div>
+                <h3>📊 戰況統計</h3>
+                <div class="stat-row"><span>你的據點數:</span> <span id="playerBases" class="stat-val">1</span></div>
+                <div class="stat-row"><span>中立據點數:</span> <span id="neutralBases" class="stat-val">4</span></div>
+                <div class="stat-row"><span>敵方據點數:</span> <span id="enemyBases" class="stat-val">1</span></div>
             </div>
 
-            <!-- AI 工具模式 -->
-            <div class="panel-section ai-mode">
-                <h3>🪄 AI 核心功能</h3>
-                <div class="btn-group" style="grid-template-columns: 1fr;">
-                    <button class="purple" onclick="runAIProcess('upscale')">✨ AI 超解析度升頻與毛孔/毛髮腦補</button>
-                    <button class="purple" onclick="runAIProcess('inpainting')">🪄 智慧語意修補 (自動填補塗抹區)</button>
-                    <button class="purple" onclick="runAIProcess('cyberpunk')">🌈 AI 藝術風格神經轉換 (Cyberpunk)</button>
-                </div>
-            </div>
-
-            <!-- AI 參數微調 -->
-            <div class="panel-section">
-                <h3>⚙️ AI 腦補強度 (Creativity)</h3>
-                <div class="slider-group">
-                    <label>幻覺/腦補程度: <span id="creativityVal" class="stat-val" style="color:#a371f7;">0.75</span></label>
-                    <input type="range" id="creativityRange" min="0.1" max="1.0" step="0.05" value="0.75" oninput="document.getElementById('creativityVal').innerText=this.value">
-                </div>
-                <div class="slider-group" style="margin-top: 6px;">
-                    <label>畫筆大小 (用於手動塗抹修補): <span id="brushVal">15</span>px</label>
-                    <input type="range" id="brushRange" min="5" max="40" step="5" value="15" oninput="document.getElementById('brushVal').innerText=this.value">
-                </div>
-            </div>
-
-            <!-- 操作按鈕 -->
-            <div class="panel-section">
-                <h3>🛠️ 畫布操作</h3>
-                <div class="btn-group">
-                    <button class="secondary" onclick="resetImage()">復原原圖</button>
-                    <button class="secondary" onclick="clearMask()">清除塗抹遮罩</button>
-                </div>
+            <div class="panel-section" style="border-left-color: #f85149;">
+                <h3>⚙️ 遊戲控制</h3>
+                <button onclick="restartGame()">重新開始遊戲</button>
             </div>
 
             <div class="instructions">
-                <strong>💡 使用提示：</strong> 點擊「智慧語意修補」前，可在畫面上用滑鼠任意塗抹想要修改的區域，AI 就會自動將其「腦補」成完美畫面！
+                <strong>🕹️ 操作說明：</strong><br>
+                1. 點擊你的據點（藍色）作為**出發點**。<br>
+                2. 再點擊目標據點（中立或紅色敵方）發動進攻！<br>
+                3. 佔領所有據點即可獲勝！
             </div>
         </div>
     </div>
 
     <script>
-        const canvas = document.getElementById("imageCanvas");
+        const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
-        const loadingOverlay = document.getElementById("loadingOverlay");
-        const loadingText = document.getElementById("loadingText");
-        const brushRange = document.getElementById("brushRange");
 
-        let currentMode = 'sample';
-        let originalImage = new Image();
-        let maskCanvas = document.createElement('canvas');
-        let maskCtx = maskCanvas.getContext('2d');
-        maskCanvas.width = 500;
-        maskCanvas.height = 400;
+        // 遊戲物件
+        let bases = [];
+        let troops = []; // 正在行進的部隊
+        let selectedBase = null;
 
-        let isDrawing = false;
+        // 初始化據點
+        function initGame() {
+            bases = [
+                { id: 1, x: 100, y: 250, owner: 'player', troops: 30, maxTroops: 100, radius: 26 }, // 玩家主基地
+                { id: 2, x: 250, y: 150, owner: 'neutral', troops: 15, maxTroops: 60, radius: 22 },
+                { id: 3, x: 250, y: 350, owner: 'neutral', troops: 15, maxTroops: 60, radius: 22 },
+                { id: 4, x: 450, y: 150, owner: 'neutral', troops: 25, maxTroops: 80, radius: 22 },
+                { id: 5, x: 450, y: 350, owner: 'neutral', troops: 25, maxTroops: 80, radius: 22 },
+                { id: 6, x: 600, y: 250, owner: 'enemy', troops: 30, maxTroops: 100, radius: 26 } // 敵方主基地
+            ];
+            troops = [];
+            selectedBase = null;
+        }
 
-        // 初始化預設圖片 (人像範例)
-        function loadSampleImage(type) {
-            currentType = type;
-            originalImage.onload = () => {
-                ctx.drawImage(originalImage, 0, 0, canvas.width, canvas.height);
-                clearMask();
-            };
-            if (type === 'portrait') {
-                // 產生一個高質感的人像測試圖 (SVG/Canvas 繪製)
-                drawPortraitSample();
-            } else {
-                drawLandscapeSample();
+        function restartGame() {
+            initGame();
+        }
+
+        // 滑鼠點擊選擇與攻擊
+        canvas.addEventListener('click', (e) => {
+            let rect = canvas.getBoundingClientRect();
+            let mx = e.clientX - rect.left;
+            let my = e.clientY - rect.top;
+
+            for (let b of bases) {
+                let dist = Math.hypot(mx - b.x, my - b.y);
+                if (dist <= b.radius) {
+                    if (b.owner === 'player') {
+                        selectedBase = b; // 選擇自己的據點
+                    } else if (selectedBase && selectedBase !== b) {
+                        // 從已選據點發兵攻擊目標
+                        sendTroops(selectedBase, b);
+                        selectedBase = null;
+                    }
+                    return;
+                }
+            }
+            selectedBase = null; // 點擊空白處取消選擇
+        });
+
+        function sendTroops(from, to) {
+            if (from.troops <= 1) return;
+            let sendCount = Math.floor(from.troops / 2);
+            from.troops -= sendCount;
+
+            troops.push({
+                x: from.x,
+                y: from.y,
+                targetX: to.x,
+                targetY: to.y,
+                fromId: from.id,
+                toId: to.id,
+                owner: from.owner,
+                count: sendCount,
+                speed: 2.5
+            });
+        }
+
+        let aiTimer = 0;
+        function updateAI() {
+            aiTimer++;
+            if (aiTimer > 120) { // 每隔一段時間 AI 自動進攻
+                aiTimer = 0;
+                let enemyBases = bases.filter(b => b.owner === 'enemy' && b.troops > 20);
+                let targets = bases.filter(b => b.owner !== 'enemy');
+                if (enemyBases.length > 0 && targets.length > 0) {
+                    let eb = enemyBases[Math.floor(Math.random() * enemyBases.length)];
+                    let tb = targets[Math.floor(Math.random() * targets.length)];
+                    
+                    let sendCount = Math.floor(eb.troops / 2);
+                    eb.troops -= sendCount;
+                    troops.push({
+                        x: eb.x,
+                        y: eb.y,
+                        targetX: tb.x,
+                        targetY: tb.y,
+                        fromId: eb.id,
+                        toId: tb.id,
+                        owner: 'enemy',
+                        count: sendCount,
+                        speed: 2.5
+                    });
+                }
             }
         }
 
-        function drawPortraitSample() {
-            ctx.fillStyle = "#1e293b";
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            // 模擬模糊人臉與背景
-            let grad = ctx.createRadialGradient(250, 180, 20, 250, 180, 180);
-            grad.addColorStop(0, "#fbcfe8");
-            grad.addColorStop(0.5, "#cbd5e1");
-            grad.addColorStop(1, "#0f172a");
-            ctx.fillStyle = grad;
-            ctx.fillRect(50, 40, 400, 320);
-
-            // 臉部輪廓
-            ctx.fillStyle = "#f43f5e";
-            ctx.beginPath(); ctx.arc(250, 170, 75, 0, Math.PI*2); ctx.fill();
-            
-            // 眼睛與嘴巴 (稍微模糊低畫質感)
-            ctx.fillStyle = "#111";
-            ctx.fillRect(220, 150, 12, 6);
-            ctx.fillRect(268, 150, 12, 6);
-            ctx.beginPath(); ctx.arc(250, 200, 15, 0, Math.PI); ctx.stroke();
-
-            // 儲存為基準原圖
-            originalImage.src = canvas.toDataURL();
-        }
-
-        function drawLandscapeSample() {
-            ctx.fillStyle = "#38bdf8";
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            // 山脈
-            ctx.fillStyle = "#047857";
-            ctx.beginPath();
-            ctx.moveTo(0, 400); ctx.lineTo(150, 200); ctx.lineTo(300, 350); ctx.lineTo(500, 150); ctx.lineTo(500, 400);
-            ctx.fill();
-            // 太陽
-            ctx.fillStyle = "#facc15";
-            ctx.beginPath(); ctx.arc(380, 100, 40, 0, Math.PI*2); ctx.fill();
-
-            originalImage.src = canvas.toDataURL();
-        }
-
-        function resetImage() {
-            ctx.drawImage(originalImage, 0, 0, canvas.width, canvas.height);
-            clearMask();
-        }
-
-        function clearMask() {
-            maskCtx.clearRect(0, 0, maskCanvas.width, maskCanvas.height);
-        }
-
-        // 滑鼠塗抹遮罩 (用於 Inpainting 腦補)
-        canvas.addEventListener('mousedown', (e) => {
-            isDrawing = true;
-            drawMask(e);
-        });
-        canvas.addEventListener('mousemove', (e) => {
-            if (isDrawing) drawMask(e);
-        });
-        window.addEventListener('mouseup', () => { isDrawing = false; });
-
-        function drawMask(e) {
-            let rect = canvas.getBoundingClientRect();
-            let x = e.clientX - rect.left;
-            let y = e.clientY - rect.top;
-            let radius = parseInt(brushRange.value);
-
-            maskCtx.fillStyle = 'rgba(163, 113, 247, 0.6)';
-            maskCtx.beginPath();
-            maskCtx.arc(x, y, radius, 0, Math.PI * 2);
-            maskCtx.fill();
-
-            // 同步顯示在畫布上 (半透明紫色塗抹區)
-            redrawCanvasWithMask();
-        }
-
-        function redrawCanvasWithMask() {
-            ctx.drawImage(originalImage, 0, 0, canvas.width, canvas.height);
-            // 疊加遮罩
-            ctx.drawImage(maskCanvas, 0, 0);
-        }
-
-        // 模擬 AI 處理過程與動畫
-        function runAIProcess(mode) {
-            loadingOverlay.classList.add("active");
-            let steps = 20;
-            let currentStep = 1;
-
-            let interval = setInterval(() => {
-                if (currentStep <= steps) {
-                    loadingText.innerText = `AI 深度神經網路運算中 (${mode.toUpperCase()} - Step ${currentStep}/${steps})...`;
-                    currentStep++;
-                } else {
-                    clearInterval(interval);
-                    loadingOverlay.classList.remove("active");
-                    applyAIEffect(mode);
-                }
-            }, 60);
-        }
-
-        // 套用 AI 腦補與優化演算法
-        function applyAIEffect(mode) {
-            let imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            let data = imgData.data;
-            let creativity = parseFloat(document.getElementById("creativityRange").value);
-
-            if (mode === 'upscale') {
-                // AI 超解析度腦補：透過強烈對比增強、邊緣銳化與雜訊去除模擬超高清細節
-                for (let i = 0; i < data.length; i += 4) {
-                    let r = data[i], g = data[i+1], b = data[i+2];
-                    // 智慧銳化與飽和度提升
-                    data[i] = Math.min(255, r * (1 + 0.2 * creativity));
-                    data[i+1] = Math.min(255, g * (1 + 0.2 * creativity));
-                    data[i+2] = Math.min(255, b * (1 + 0.2 * creativity));
-                }
-                ctx.putImageData(imgData, 0, 0);
-                // 額外加上一層 AI 智慧高光細節
-                ctx.strokeStyle = "rgba(255, 255, 255, 0.15)";
-                ctx.lineWidth = 1;
-                ctx.strokeRect(2, 2, canvas.width-4, canvas.height-4);
-
-            } else if (mode === 'inpainting') {
-                // AI 語意修補 (Inpainting)：偵測紫色塗抹區，自動根據周遭環境「腦補」填充內容
-                let maskData = maskCtx.getImageData(0, 0, maskCanvas.width, maskCanvas.height).data;
-                for (let i = 0; i < data.length; i += 4) {
-                    if (maskData[i+3] > 50) { // 如果該像素被塗抹了
-                        // AI 智慧腦補：生成與周圍環境協調的高質感色彩與紋理
-                        let sampleOffset = (i + 400) % data.length;
-                        data[i]   = Math.min(255, data[sampleOffset] * 1.1 + 30 * creativity);
-                        data[i+1] = Math.min(255, data[sampleOffset+1] * 0.9 + 50 * creativity);
-                        data[i+2] = Math.min(255, data[sampleOffset+2] * 1.2 + 40 * creativity);
+        function update() {
+            // 1. 據點兵力自動增長
+            bases.forEach(b => {
+                if (b.owner !== 'neutral') {
+                    if (Math.random() < 0.05 && b.troops < b.maxTroops) {
+                        b.troops++;
                     }
                 }
-                ctx.putImageData(imgData, 0, 0);
-                clearMask();
+            });
 
-            } else if (mode === 'cyberpunk') {
-                // AI 藝術風格遷移 (Cyberpunk 霓虹色調)
-                for (let i = 0; i < data.length; i += 4) {
-                    let r = data[i], g = data[i+1], b = data[i+2];
-                    data[i]   = Math.min(255, r * 0.8 + 80 * creativity); // 增加洋紅
-                    data[i+1] = Math.min(255, g * 0.5);                   // 降低綠色
-                    data[i+2] = Math.min(255, b * 1.5 + 50 * creativity); // 大幅增加藍色霓虹
+            // 2. 部隊移動更新
+            for (let i = troops.length - 1; i >= 0; i--) {
+                let t = troops[i];
+                let angle = Math.atan2(t.targetY - t.y, t.targetX - t.x);
+                t.x += Math.cos(angle) * t.speed;
+                t.y += Math.sin(angle) * t.speed;
+
+                // 抵達目標據點
+                if (Math.hypot(t.targetX - t.x, t.targetY - t.y) < 5) {
+                    let targetBase = bases.find(b => b.id === t.toId);
+                    if (targetBase) {
+                        if (targetBase.owner === t.owner) {
+                            targetBase.troops += t.count; // 增援
+                            if (targetBase.troops > targetBase.maxTroops) targetBase.maxTroops = targetBase.troops;
+                        } else {
+                            targetBase.troops -= t.count; // 交戰
+                            if (targetBase.troops < 0) {
+                                targetBase.owner = t.owner; // 佔領！
+                                targetBase.troops = Math.abs(targetBase.troops);
+                            }
+                        }
+                    }
+                    troops.splice(i, 1);
                 }
-                ctx.putImageData(imgData, 0, 0);
             }
 
-            // 更新原圖快照以便再次處理
-            originalImage.src = canvas.toDataURL();
+            updateAI();
+
+            // 更新 UI 數據
+            document.getElementById("playerBases").innerText = bases.filter(b => b.owner === 'player').length;
+            document.getElementById("neutralBases").innerText = bases.filter(b => b.owner === 'neutral').length;
+            document.getElementById("enemyBases").innerText = bases.filter(b => b.owner === 'enemy').length;
         }
 
-        // 初始化載入人像範例
-        loadSampleImage('portrait');
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // 1. 繪製據點之間的連線背景
+            ctx.strokeStyle = "#30363d";
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(100, 250); ctx.lineTo(250, 150);
+            ctx.moveTo(100, 250); ctx.lineTo(250, 350);
+            ctx.moveTo(250, 150); ctx.lineTo(450, 150);
+            ctx.moveTo(250, 350); ctx.lineTo(450, 350);
+            ctx.moveTo(250, 150); ctx.lineTo(250, 350);
+            ctx.moveTo(450, 150); ctx.lineTo(600, 250);
+            ctx.moveTo(450, 350); ctx.lineTo(600, 250);
+            ctx.moveTo(450, 150); ctx.lineTo(450, 350);
+            ctx.stroke();
+
+            // 2. 繪製據點
+            bases.forEach(b => {
+                ctx.beginPath();
+                ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
+
+                if (b.owner === 'player') ctx.fillStyle = '#1f6feb'; // 藍色
+                else if (b.owner === 'enemy') ctx.fillStyle = '#f85149'; // 紅色
+                else ctx.fillStyle = '#8b949e'; // 中立灰色
+
+                ctx.fill();
+
+                // 如果被選中，繪製高亮外框
+                if (selectedBase === b) {
+                    ctx.strokeStyle = '#58a6ff';
+                    ctx.lineWidth = 4;
+                    ctx.stroke();
+                } else {
+                    ctx.strokeStyle = '#30363d';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                }
+
+                // 繪製兵力數字
+                ctx.fillStyle = '#fff';
+                ctx.font = "bold 13px sans-serif";
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                ctx.fillText(Math.floor(b.troops), b.x, b.y);
+            });
+
+            // 3. 繪製行進中的部隊小圓點
+            troops.forEach(t => {
+                ctx.beginPath();
+                ctx.arc(t.x, t.y, 6, 0, Math.PI * 2);
+                ctx.fillStyle = t.owner === 'player' ? '#58a6ff' : '#ff7b72';
+                ctx.fill();
+            });
+        }
+
+        function gameLoop() {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        initGame();
+        requestAnimationFrame(gameLoop);
     </script>
 </body>
 </html>
