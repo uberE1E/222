@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OpenFront: 領土爭奪戰 (Territory Wars)</title>
+    <title>方塊法師：元素防禦戰</title>
     <style>
         * { box-sizing: border-box; }
         body {
             margin: 0;
-            background-color: #0d1117;
-            color: #c9d1d9;
+            background-color: #0f172a;
+            color: #f8fafc;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             display: flex;
             flex-direction: column;
@@ -20,306 +20,300 @@
             user-select: none;
         }
         h1 {
-            margin: 5px 0;
+            margin: 4px 0;
             font-size: 22px;
-            color: #58a6ff;
-            text-shadow: 0 0 10px rgba(88, 166, 255, 0.4);
+            color: #c084fc;
+            text-shadow: 0 0 10px rgba(192, 132, 252, 0.5);
         }
         .subtitle {
-            font-size: 12px;
-            color: #8b949e;
+            font-size: 11px;
+            color: #94a3b8;
             margin-bottom: 8px;
         }
-        #mainContainer {
-            display: flex;
-            gap: 15px;
-            align-items: flex-start;
-        }
         canvas {
-            border: 3px solid #30363d;
-            background-color: #161b22;
+            border: 3px solid #334155;
+            background-color: #1e1b4b;
             box-shadow: 0 10px 30px rgba(0,0,0,0.8);
             border-radius: 8px;
             cursor: pointer;
         }
-        #controlPanel {
-            width: 240px;
-            background: #161b22;
-            border: 1px solid #30363d;
-            border-radius: 8px;
-            padding: 15px;
+        .ui-panel {
+            margin-top: 8px;
             display: flex;
-            flex-direction: column;
-            gap: 12px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
-        }
-        .panel-section {
-            background: #21262d;
-            padding: 10px;
-            border-radius: 6px;
-            border-left: 4px solid #58a6ff;
-        }
-        .panel-section h3 {
-            margin: 0 0 8px 0;
+            gap: 15px;
             font-size: 13px;
-            color: #fff;
-        }
-        .stat-row {
-            display: flex;
-            justify-content: space-between;
-            font-size: 12px;
-            margin-bottom: 6px;
-            color: #8b949e;
-        }
-        .stat-val { font-weight: bold; color: #58a6ff; }
-        button {
-            background-color: #238636;
-            color: white;
-            border: none;
-            padding: 8px 12px;
-            border-radius: 6px;
-            font-size: 12px;
             font-weight: bold;
-            cursor: pointer;
-            width: 100%;
-            transition: background 0.2s;
         }
-        button:hover { background-color: #2ea043; }
-        button.secondary { background-color: #da3633; }
-        button.secondary:hover { background-color: #f85149; }
+        .ui-badge {
+            background: #312e81;
+            padding: 4px 10px;
+            border-radius: 4px;
+            border: 1px solid #4338ca;
+        }
         .instructions {
+            margin-top: 6px;
             font-size: 11px;
-            color: #8b949e;
-            line-height: 1.4;
-            background: #0d1117;
-            padding: 8px;
+            color: #94a3b8;
+            background: #1e293b;
+            padding: 6px 12px;
             border-radius: 4px;
         }
     </style>
 </head>
 <body>
 
-    <h1>🌐 OpenFront: 領土爭奪戰</h1>
-    <div class="subtitle">佔領據點、調度大軍、擊敗紅色敵方勢力！</div>
+    <h1>🔮 方塊法師：元素防禦戰</h1>
+    <div class="subtitle">點擊畫布放置法術防禦塔，阻擋邪惡像素怪獸的進攻！</div>
 
-    <div id="mainContainer">
-        <canvas id="gameCanvas" width="700" height="500"></canvas>
+    <canvas id="gameCanvas" width="600" height="400"></canvas>
 
-        <div id="controlPanel">
-            <div class="panel-section">
-                <h3>📊 戰況統計</h3>
-                <div class="stat-row"><span>你的據點數:</span> <span id="playerBases" class="stat-val">1</span></div>
-                <div class="stat-row"><span>中立據點數:</span> <span id="neutralBases" class="stat-val">4</span></div>
-                <div class="stat-row"><span>敵方據點數:</span> <span id="enemyBases" class="stat-val">1</span></div>
-            </div>
+    <div class="ui-panel">
+        <div class="ui-badge">💰 金幣: <span id="goldVal">150</span></div>
+        <div class="ui-badge">❤️ 生命值: <span id="hpVal">20</span></div>
+        <div class="ui-badge">🌊 波次: <span id="waveVal">1</span></div>
+    </div>
 
-            <div class="panel-section" style="border-left-color: #f85149;">
-                <h3>⚙️ 遊戲控制</h3>
-                <button onclick="restartGame()">重新開始遊戲</button>
-            </div>
-
-            <div class="instructions">
-                <strong>🕹️ 操作說明：</strong><br>
-                1. 點擊你的據點（藍色）作為**出發點**。<br>
-                2. 再點擊目標據點（中立或紅色敵方）發動進攻！<br>
-                3. 佔領所有據點即可獲勝！
-            </div>
-        </div>
+    <div class="instructions">
+        提示：點擊地圖空白處花費 50 金幣建造魔法塔。塔會自動攻擊射程內的怪獸！
     </div>
 
     <script>
         const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
 
-        // 遊戲物件
-        let bases = [];
-        let troops = []; // 正在行進的部隊
-        let selectedBase = null;
+        let gold = 150;
+        let hp = 20;
+        let wave = 1;
+        let gameOver = false;
 
-        // 初始化據點
-        function initGame() {
-            bases = [
-                { id: 1, x: 100, y: 250, owner: 'player', troops: 30, maxTroops: 100, radius: 26 }, // 玩家主基地
-                { id: 2, x: 250, y: 150, owner: 'neutral', troops: 15, maxTroops: 60, radius: 22 },
-                { id: 3, x: 250, y: 350, owner: 'neutral', troops: 15, maxTroops: 60, radius: 22 },
-                { id: 4, x: 450, y: 150, owner: 'neutral', troops: 25, maxTroops: 80, radius: 22 },
-                { id: 5, x: 450, y: 350, owner: 'neutral', troops: 25, maxTroops: 80, radius: 22 },
-                { id: 6, x: 600, y: 250, owner: 'enemy', troops: 30, maxTroops: 100, radius: 26 } // 敵方主基地
-            ];
-            troops = [];
-            selectedBase = null;
-        }
+        // 敵人路徑 (S型路徑)
+        const path = [
+            {x: 0, y: 80},
+            {x: 150, y: 80},
+            {x: 150, y: 280},
+            {x: 350, y: 280},
+            {x: 350, y: 120},
+            {x: 500, y: 120},
+            {x: 500, y: 350},
+            {x: 600, y: 350}
+        ];
 
-        function restartGame() {
-            initGame();
-        }
+        let towers = [];
+        let enemies = [];
+        let projectiles = [];
 
-        // 滑鼠點擊選擇與攻擊
-        canvas.addEventListener('click', (e) => {
-            let rect = canvas.getBoundingClientRect();
-            let mx = e.clientX - rect.left;
-            let my = e.clientY - rect.top;
+        let spawnTimer = 0;
+        let enemiesToSpawn = 5;
 
-            for (let b of bases) {
-                let dist = Math.hypot(mx - b.x, my - b.y);
-                if (dist <= b.radius) {
-                    if (b.owner === 'player') {
-                        selectedBase = b; // 選擇自己的據點
-                    } else if (selectedBase && selectedBase !== b) {
-                        // 從已選據點發兵攻擊目標
-                        sendTroops(selectedBase, b);
-                        selectedBase = null;
-                    }
-                    return;
-                }
+        // 放置防禦塔
+        canvas.addEventListener("click", (e) => {
+            if (gameOver) {
+                resetGame();
+                return;
             }
-            selectedBase = null; // 點擊空白處取消選擇
+
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            // 檢查是否點在路上 (簡單避開路徑)
+            if (gold >= 50) {
+                towers.push({ x: x, y: y, range: 90, damage: 25, coolDown: 0, maxCoolDown: 35 });
+                gold -= 50;
+                document.getElementById("goldVal").innerText = gold;
+            }
         });
 
-        function sendTroops(from, to) {
-            if (from.troops <= 1) return;
-            let sendCount = Math.floor(from.troops / 2);
-            from.troops -= sendCount;
-
-            troops.push({
-                x: from.x,
-                y: from.y,
-                targetX: to.x,
-                targetY: to.y,
-                fromId: from.id,
-                toId: to.id,
-                owner: from.owner,
-                count: sendCount,
-                speed: 2.5
-            });
-        }
-
-        let aiTimer = 0;
-        function updateAI() {
-            aiTimer++;
-            if (aiTimer > 120) { // 每隔一段時間 AI 自動進攻
-                aiTimer = 0;
-                let enemyBases = bases.filter(b => b.owner === 'enemy' && b.troops > 20);
-                let targets = bases.filter(b => b.owner !== 'enemy');
-                if (enemyBases.length > 0 && targets.length > 0) {
-                    let eb = enemyBases[Math.floor(Math.random() * enemyBases.length)];
-                    let tb = targets[Math.floor(Math.random() * targets.length)];
-                    
-                    let sendCount = Math.floor(eb.troops / 2);
-                    eb.troops -= sendCount;
-                    troops.push({
-                        x: eb.x,
-                        y: eb.y,
-                        targetX: tb.x,
-                        targetY: tb.y,
-                        fromId: eb.id,
-                        toId: tb.id,
-                        owner: 'enemy',
-                        count: sendCount,
-                        speed: 2.5
-                    });
-                }
+        function spawnEnemy() {
+            if (enemiesToSpawn > 0) {
+                enemies.push({
+                    pathIndex: 0,
+                    x: path[0].x,
+                    y: path[0].y,
+                    hp: 60 + wave * 15,
+                    maxHp: 60 + wave * 15,
+                    speed: 1.5 + wave * 0.1,
+                    size: 14
+                });
+                enemiesToSpawn--;
+            } else if (enemies.length === 0) {
+                // 下一波
+                wave++;
+                document.getElementById("waveVal").innerText = wave;
+                enemiesToSpawn = 5 + wave * 2;
             }
         }
 
         function update() {
-            // 1. 據點兵力自動增長
-            bases.forEach(b => {
-                if (b.owner !== 'neutral') {
-                    if (Math.random() < 0.05 && b.troops < b.maxTroops) {
-                        b.troops++;
-                    }
+            if (gameOver) return;
+
+            spawnTimer++;
+            if (spawnTimer > 50) {
+                spawnEnemy();
+                spawnTimer = 0;
+            }
+
+            // 更新敵人位置
+            for (let i = enemies.length - 1; i >= 0; i--) {
+                let en = enemies[i];
+                let target = path[en.pathIndex + 1];
+                if (!target) {
+                    // 到達終點扣血
+                    hp--;
+                    document.getElementById("hpVal").innerText = hp;
+                    enemies.splice(i, 1);
+                    if (hp <= 0) gameOver = true;
+                    continue;
                 }
-            });
 
-            // 2. 部隊移動更新
-            for (let i = troops.length - 1; i >= 0; i--) {
-                let t = troops[i];
-                let angle = Math.atan2(t.targetY - t.y, t.targetX - t.x);
-                t.x += Math.cos(angle) * t.speed;
-                t.y += Math.sin(angle) * t.speed;
+                let dx = target.x - en.x;
+                let dy = target.y - en.y;
+                let dist = Math.hypot(dx, dy);
 
-                // 抵達目標據點
-                if (Math.hypot(t.targetX - t.x, t.targetY - t.y) < 5) {
-                    let targetBase = bases.find(b => b.id === t.toId);
-                    if (targetBase) {
-                        if (targetBase.owner === t.owner) {
-                            targetBase.troops += t.count; // 增援
-                            if (targetBase.troops > targetBase.maxTroops) targetBase.maxTroops = targetBase.troops;
-                        } else {
-                            targetBase.troops -= t.count; // 交戰
-                            if (targetBase.troops < 0) {
-                                targetBase.owner = t.owner; // 佔領！
-                                targetBase.troops = Math.abs(targetBase.troops);
-                            }
-                        }
-                    }
-                    troops.splice(i, 1);
+                if (dist < en.speed) {
+                    en.x = target.x;
+                    en.y = target.y;
+                    en.pathIndex++;
+                } else {
+                    en.x += (dx / dist) * en.speed;
+                    en.y += (dy / dist) * en.speed;
                 }
             }
 
-            updateAI();
+            // 更新防禦塔攻擊
+            for (let t of towers) {
+                if (t.coolDown > 0) t.coolDown--;
 
-            // 更新 UI 數據
-            document.getElementById("playerBases").innerText = bases.filter(b => b.owner === 'player').length;
-            document.getElementById("neutralBases").innerText = bases.filter(b => b.owner === 'neutral').length;
-            document.getElementById("enemyBases").innerText = bases.filter(b => b.owner === 'enemy').length;
+                if (t.coolDown === 0) {
+                    // 尋找射程內最近的敵人
+                    let closestEnemy = null;
+                    let minDist = Infinity;
+
+                    for (let en of enemies) {
+                        let d = Math.hypot(en.x - t.x, en.y - t.y);
+                        if (d < t.range && d < minDist) {
+                            minDist = d;
+                            closestEnemy = en;
+                        }
+                    }
+
+                    if (closestEnemy) {
+                        projectiles.push({
+                            x: t.x,
+                            y: t.y,
+                            target: closestEnemy,
+                            speed: 6,
+                            damage: t.damage
+                        });
+                        t.coolDown = t.maxCoolDown;
+                    }
+                }
+            }
+
+            // 更新飛彈
+            for (let i = projectiles.length - 1; i >= 0; i--) {
+                let p = projectiles[i];
+                if (!p.target || p.target.hp <= 0) {
+                    projectiles.splice(i, 1);
+                    continue;
+                }
+
+                let dx = p.target.x - p.x;
+                let dy = p.target.y - p.y;
+                let dist = Math.hypot(dx, dy);
+
+                if (dist < p.speed) {
+                    // 擊中
+                    p.target.hp -= p.damage;
+                    if (p.target.hp <= 0) {
+                        let idx = enemies.indexOf(p.target);
+                        if (idx !== -1) enemies.splice(idx, 1);
+                        gold += 20; // 擊殺獎勵金幣
+                        document.getElementById("goldVal").innerText = gold;
+                    }
+                    projectiles.splice(i, 1);
+                } else {
+                    p.x += (dx / dist) * p.speed;
+                    p.y += (dy / dist) * p.speed;
+                }
+            }
         }
 
         function draw() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // 1. 繪製據點之間的連線背景
-            ctx.strokeStyle = "#30363d";
-            ctx.lineWidth = 2;
+            // 1. 繪製地圖路徑
+            ctx.strokeStyle = "#312e81";
+            ctx.lineWidth = 28;
+            ctx.lineCap = "round";
+            ctx.lineJoin = "round";
             ctx.beginPath();
-            ctx.moveTo(100, 250); ctx.lineTo(250, 150);
-            ctx.moveTo(100, 250); ctx.lineTo(250, 350);
-            ctx.moveTo(250, 150); ctx.lineTo(450, 150);
-            ctx.moveTo(250, 350); ctx.lineTo(450, 350);
-            ctx.moveTo(250, 150); ctx.lineTo(250, 350);
-            ctx.moveTo(450, 150); ctx.lineTo(600, 250);
-            ctx.moveTo(450, 350); ctx.lineTo(600, 250);
-            ctx.moveTo(450, 150); ctx.lineTo(450, 350);
+            ctx.moveTo(path[0].x, path[0].y);
+            for (let i = 1; i < path.length; i++) {
+                ctx.lineTo(path[i].x, path[i].y);
+            }
             ctx.stroke();
 
-            // 2. 繪製據點
-            bases.forEach(b => {
+            // 2. 繪製防禦塔
+            for (let t of towers) {
+                ctx.fillStyle = "#c084fc";
+                ctx.fillRect(t.x - 12, t.y - 12, 24, 24);
+                ctx.strokeStyle = "#ffffff";
+                ctx.lineWidth = 2;
+                ctx.strokeRect(t.x - 12, t.y - 12, 24, 24);
+            }
+
+            // 3. 繪製敵人
+            for (let en of enemies) {
+                ctx.fillStyle = "#f43f5e";
                 ctx.beginPath();
-                ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
-
-                if (b.owner === 'player') ctx.fillStyle = '#1f6feb'; // 藍色
-                else if (b.owner === 'enemy') ctx.fillStyle = '#f85149'; // 紅色
-                else ctx.fillStyle = '#8b949e'; // 中立灰色
-
+                ctx.arc(en.x, en.y, en.size, 0, Math.PI * 2);
                 ctx.fill();
 
-                // 如果被選中，繪製高亮外框
-                if (selectedBase === b) {
-                    ctx.strokeStyle = '#58a6ff';
-                    ctx.lineWidth = 4;
-                    ctx.stroke();
-                } else {
-                    ctx.strokeStyle = '#30363d';
-                    ctx.lineWidth = 2;
-                    ctx.stroke();
-                }
+                // 血條
+                ctx.fillStyle = "#334155";
+                ctx.fillRect(en.x - 15, en.y - 22, 30, 4);
+                ctx.fillStyle = "#10b981";
+                ctx.fillRect(en.x - 15, en.y - 22, 30 * (en.hp / en.maxHp), 4);
+            }
 
-                // 繪製兵力數字
-                ctx.fillStyle = '#fff';
-                ctx.font = "bold 13px sans-serif";
+            // 4. 繪製飛彈
+            for (let p of projectiles) {
+                ctx.fillStyle = "#38bdf8";
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // 遊戲結束畫面
+            if (gameOver) {
+                ctx.fillStyle = "rgba(15, 23, 42, 0.85)";
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = "#f43f5e";
+                ctx.font = "bold 26px sans-serif";
                 ctx.textAlign = "center";
-                ctx.textBaseline = "middle";
-                ctx.fillText(Math.floor(b.troops), b.x, b.y);
-            });
+                ctx.fillText("防線崩潰 (GAME OVER)", canvas.width / 2, canvas.height / 2 - 20);
+                ctx.fillStyle = "#f8fafc";
+                ctx.font = "14px sans-serif";
+                ctx.fillText(`撐過了 ${wave} 波進攻`, canvas.width / 2, canvas.height / 2 + 15);
+                ctx.fillStyle = "#38bdf8";
+                ctx.fillText("點擊任意處重新開始", canvas.width / 2, canvas.height / 2 + 50);
+                ctx.textAlign = "left";
+            }
+        }
 
-            // 3. 繪製行進中的部隊小圓點
-            troops.forEach(t => {
-                ctx.beginPath();
-                ctx.arc(t.x, t.y, 6, 0, Math.PI * 2);
-                ctx.fillStyle = t.owner === 'player' ? '#58a6ff' : '#ff7b72';
-                ctx.fill();
-            });
+        function resetGame() {
+            gold = 150;
+            hp = 20;
+            wave = 1;
+            gameOver = false;
+            towers = [];
+            enemies = [];
+            projectiles = [];
+            enemiesToSpawn = 5;
+            document.getElementById("goldVal").innerText = gold;
+            document.getElementById("hpVal").innerText = hp;
+            document.getElementById("waveVal").innerText = wave;
         }
 
         function gameLoop() {
@@ -328,7 +322,6 @@
             requestAnimationFrame(gameLoop);
         }
 
-        initGame();
         requestAnimationFrame(gameLoop);
     </script>
 </body>
