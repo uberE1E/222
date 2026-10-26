@@ -3,1218 +3,251 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D 賽博朋克 MOBA 戰術對決與 AI 進化競技場</title>
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Three.js (3D 渲染引擎) -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <!-- OrbitControls (鏡頭控制) -->
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
-    <!-- Font Awesome 圖標 -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <title>極簡視覺錯覺滾球解謎 (Monument Ball)</title>
     <style>
+        * { box-sizing: border-box; }
         body {
             margin: 0;
-            overflow: hidden;
-            background-color: #080b10;
-            font-family: 'PingFang TC', 'Microsoft JhengHei', sans-serif;
-            user-select: none;
-        }
-        #canvas-container {
-            width: 100vw;
-            height: 100vh;
-            position: absolute;
-            top: 0;
-            left: 0;
-            z-index: 1;
-        }
-        /* Custom UI Glassmorphism Effect */
-        .glass-panel {
-            background: rgba(13, 17, 23, 0.85);
-            backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.12);
-            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.6);
-        }
-        .hud-btn {
-            transition: all 0.2s ease-in-out;
-            background: linear-gradient(135deg, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.9) 100%);
-            border: 1px solid rgba(56, 189, 248, 0.3);
-        }
-        .hud-btn:hover:not(:disabled) {
-            border-color: rgba(56, 189, 248, 0.8);
-            box-shadow: 0 0 12px rgba(56, 189, 248, 0.4);
-            transform: translateY(-1px);
-        }
-        .hud-btn:active:not(:disabled) {
-            transform: translateY(1px);
-        }
-        /* Skill Cooldown Overlay */
-        .cd-overlay {
-            position: absolute;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0, 0, 0, 0.7);
+            background-color: #f1f5f9;
+            color: #1e293b;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
-            color: #38bdf8;
+            min-height: 100vh;
+            overflow: hidden;
+            user-select: none;
+        }
+        h1 {
+            margin: 4px 0;
+            font-size: 22px;
+            color: #d97706;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+        .subtitle {
+            font-size: 12px;
+            color: #64748b;
+            margin-bottom: 12px;
+        }
+        #gameWrapper {
+            position: relative;
+            box-shadow: 0 12px 30px rgba(0,0,0,0.15);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        canvas {
+            background-color: #fef08a; /* 影片經典黃色底色 */
+            display: block;
+            cursor: pointer;
+        }
+        .instructions {
+            margin-top: 14px;
+            font-size: 12px;
+            color: #475569;
+            background: #ffffff;
+            padding: 8px 16px;
+            border-radius: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        kbd {
+            background: #e2e8f0;
+            color: #0f172a;
+            padding: 2px 6px;
+            border-radius: 4px;
             font-weight: bold;
-            font-size: 1.1rem;
-            border-radius: 0.5rem;
-        }
-        /* Custom Scrollbar */
-        ::-webkit-scrollbar {
-            width: 6px;
-        }
-        ::-webkit-scrollbar-track {
-            background: rgba(15, 23, 42, 0.6);
-        }
-        ::-webkit-scrollbar-thumb {
-            background: rgba(56, 189, 248, 0.4);
-            border-radius: 3px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: rgba(56, 189, 248, 0.8);
-        }
-        #minimapCanvas {
-            border: 2px solid rgba(56, 189, 248, 0.5);
-            box-shadow: 0 0 15px rgba(0,0,0,0.8);
-            background: #020617;
         }
     </style>
 </head>
-<body class="text-white overflow-hidden">
+<body>
 
-    <!-- 3D Canvas -->
-    <div id="canvas-container"></div>
+    <h1>🟡 視覺錯覺幾何滾球解謎</h1>
+    <div class="subtitle">致敬《When the indie game dev says "I made something simple"》極簡迷宮設計</div>
 
-    <!-- 頂部戰況 HUD (KDA, 比分, 遊戲時間) -->
-    <div class="absolute top-3 left-1/2 -translate-x-1/2 z-10 glass-panel px-6 py-2 rounded-full flex items-center gap-8 border-cyan-500/30">
-        <!-- 藍隊 (我方) 比分 -->
-        <div class="flex items-center gap-3">
-            <span class="text-cyan-400 font-black text-xl tracking-wider">BLUE</span>
-            <span id="blueKills" class="text-3xl font-extrabold text-cyan-300">0</span>
-        </div>
-        <!-- 遊戲計時器 -->
-        <div class="text-center">
-            <div id="gameTimer" class="text-xl font-mono font-bold text-amber-400">00:00</div>
-            <div class="text-[10px] text-gray-400 tracking-widest uppercase">5v5 Arena</div>
-        </div>
-        <!-- 紅隊 (敵方) 比分 -->
-        <div class="flex items-center gap-3">
-            <span id="redKills" class="text-3xl font-extrabold text-rose-500">0</span>
-            <span class="text-rose-500 font-black text-xl tracking-wider">RED</span>
-        </div>
+    <div id="gameWrapper">
+        <canvas id="gameCanvas" width="500" height="600"></canvas>
     </div>
 
-    <!-- 頂部功能快捷按鈕列 (商店, 戰況, 大腦分析, 視角) -->
-    <div class="absolute top-3 right-4 z-10 flex gap-2">
-        <button onclick="toggleModal('shopModal')" class="hud-btn px-4 py-2 rounded-lg text-sm font-bold text-amber-300 flex items-center gap-2">
-            <i class="fa-solid fa-cart-shopping text-amber-400"></i> 神裝商店 (<span id="playerGold">0</span>G)
-        </button>
-        <button onclick="toggleModal('scoreboardModal')" class="hud-btn px-4 py-2 rounded-lg text-sm font-bold text-cyan-300 flex items-center gap-2">
-            <i class="fa-solid fa-list-check"></i> 戰況對決
-        </button>
-        <button onclick="toggleModal('aiBrainModal')" class="hud-btn px-4 py-2 rounded-lg text-sm font-bold text-purple-300 flex items-center gap-2">
-            <i class="fa-solid fa-brain"></i> AI大腦進化數據
-        </button>
-        <button id="camModeBtn" onclick="cycleCameraMode()" class="hud-btn px-4 py-2 rounded-lg text-sm font-bold text-emerald-300 flex items-center gap-2">
-            <i class="fa-solid fa-camera"></i> 視角: 跟隨
-        </button>
+    <div class="instructions">
+        💡 操作指示：點擊畫布或按 <kbd>空白鍵 (Space)</kbd> 旋轉錯覺橋樑，連接賽道引導紅球抵達終點！
     </div>
 
-    <!-- 左下角：小地圖 (Minimap) & 英雄屬性 -->
-    <div class="absolute bottom-4 left-4 z-10 flex flex-col gap-2">
-        <!-- 小地圖 -->
-        <div class="relative">
-            <canvas id="minimapCanvas" width="180" height="180" class="rounded-lg cursor-pointer"></canvas>
-            <div class="absolute top-1 left-2 text-[10px] text-cyan-300/80 font-mono font-bold">MINIMAP</div>
-        </div>
-        <!-- 玩家屬性摘要 -->
-        <div class="glass-panel p-2.5 rounded-lg text-xs w-[180px] space-y-1">
-            <div class="flex justify-between"><span class="text-gray-400">攻擊力:</span> <span id="statAtk" class="font-bold text-amber-400">100</span></div>
-            <div class="flex justify-between"><span class="text-gray-400">法術強度:</span> <span id="statMatk" class="font-bold text-purple-400">0</span></div>
-            <div class="flex justify-between"><span class="text-gray-400">物理防禦:</span> <span id="statDef" class="font-bold text-blue-400">30</span></div>
-            <div class="flex justify-between"><span class="text-gray-400">移動速度:</span> <span id="statSpeed" class="font-bold text-emerald-400">6.0</span></div>
-        </div>
-    </div>
-
-    <!-- 正下方：英雄狀態與技能/召喚師技能控制列 -->
-    <div class="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 glass-panel p-4 rounded-2xl flex flex-col items-center gap-3 border-cyan-500/40 w-[580px]">
-        <!-- 血量與魔力條 -->
-        <div class="w-full space-y-1.5">
-            <!-- 血條 -->
-            <div class="relative w-full h-5 bg-gray-900/90 rounded-full overflow-hidden border border-emerald-500/30">
-                <div id="playerHpBar" class="h-full bg-gradient-to-r from-emerald-600 to-emerald-400 transition-all duration-100" style="width: 100%;"></div>
-                <div id="playerHpText" class="absolute inset-0 flex items-center justify-center text-xs font-black text-white drop-shadow">2000 / 2000</div>
-            </div>
-            <!-- 魔力條 -->
-            <div class="relative w-full h-3 bg-gray-900/90 rounded-full overflow-hidden border border-cyan-500/30">
-                <div id="playerMpBar" class="h-full bg-gradient-to-r from-cyan-600 to-cyan-400 transition-all duration-100" style="width: 100%;"></div>
-                <div id="playerMpText" class="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-white drop-shadow">500 / 500</div>
-            </div>
-        </div>
-
-        <!-- 技能圖標列 (Q, W, E, R, D, F) -->
-        <div class="flex items-center gap-3">
-            <!-- Q 技能 -->
-            <div class="relative group">
-                <div class="w-14 h-14 rounded-xl glass-panel border-cyan-400/50 flex flex-col items-center justify-center cursor-pointer hover:border-cyan-300 relative overflow-hidden">
-                    <i class="fa-solid fa-bolt text-cyan-400 text-xl mb-1"></i>
-                    <span class="text-[10px] font-bold text-gray-300">雷霆衝擊</span>
-                    <span class="absolute top-1 left-1 text-[10px] font-black text-cyan-400 bg-black/60 px-1 rounded">Q</span>
-                    <div id="cd-q" class="cd-overlay hidden">0s</div>
-                </div>
-            </div>
-            <!-- W 技能 -->
-            <div class="relative group">
-                <div class="w-14 h-14 rounded-xl glass-panel border-amber-400/50 flex flex-col items-center justify-center cursor-pointer hover:border-amber-300 relative overflow-hidden">
-                    <i class="fa-solid fa-shield-halved text-amber-400 text-xl mb-1"></i>
-                    <span class="text-[10px] font-bold text-gray-300">防護力場</span>
-                    <span class="absolute top-1 left-1 text-[10px] font-black text-amber-400 bg-black/60 px-1 rounded">W</span>
-                    <div id="cd-w" class="cd-overlay hidden">0s</div>
-                </div>
-            </div>
-            <!-- E 技能 -->
-            <div class="relative group">
-                <div class="w-14 h-14 rounded-xl glass-panel border-purple-400/50 flex flex-col items-center justify-center cursor-pointer hover:border-purple-300 relative overflow-hidden">
-                    <i class="fa-solid fa-wind text-purple-400 text-xl mb-1"></i>
-                    <span class="text-[10px] font-bold text-gray-300">疾風衝鋒</span>
-                    <span class="absolute top-1 left-1 text-[10px] font-black text-purple-400 bg-black/60 px-1 rounded">E</span>
-                    <div id="cd-e" class="cd-overlay hidden">0s</div>
-                </div>
-            </div>
-            <!-- R 大招 -->
-            <div class="relative group">
-                <div class="w-14 h-14 rounded-xl glass-panel border-rose-500/80 flex flex-col items-center justify-center cursor-pointer hover:border-rose-400 relative overflow-hidden bg-rose-950/20">
-                    <i class="fa-solid fa-burst text-rose-500 text-xl mb-1"></i>
-                    <span class="text-[10px] font-bold text-gray-200">毀滅裁決</span>
-                    <span class="absolute top-1 left-1 text-[10px] font-black text-rose-400 bg-black/60 px-1 rounded">R</span>
-                    <div id="cd-r" class="cd-overlay hidden">0s</div>
-                </div>
-            </div>
-
-            <div class="h-10 w-[1px] bg-gray-700 mx-1"></div>
-
-            <!-- D 召喚師技能 (閃現) -->
-            <div class="relative group">
-                <div class="w-12 h-12 rounded-xl glass-panel border-yellow-400/50 flex flex-col items-center justify-center relative overflow-hidden">
-                    <i class="fa-solid fa-person-running text-yellow-400 text-lg"></i>
-                    <span class="absolute top-0.5 left-1 text-[9px] font-black text-yellow-400 bg-black/60 px-1 rounded">D</span>
-                    <div id="cd-d" class="cd-overlay hidden">0s</div>
-                </div>
-            </div>
-            <!-- F 召喚師技能 (治癒) -->
-            <div class="relative group">
-                <div class="w-12 h-12 rounded-xl glass-panel border-emerald-400/50 flex flex-col items-center justify-center relative overflow-hidden">
-                    <i class="fa-solid fa-kit-medical text-emerald-400 text-lg"></i>
-                    <span class="absolute top-0.5 left-1 text-[9px] font-black text-emerald-400 bg-black/60 px-1 rounded">F</span>
-                    <div id="cd-f" class="cd-overlay hidden">0s</div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- 開始遊戲選單與模式選擇視窗 -->
-    <div id="startScreen" class="absolute inset-0 z-50 glass-panel bg-slate-950/95 flex flex-col items-center justify-center p-6">
-        <div class="max-w-2xl text-center space-y-6">
-            <h1 class="text-5xl font-black tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-sky-300 to-purple-500 drop-shadow-[0_0_25px_rgba(56,189,248,0.6)]">
-                3D 賽博 MOBA 戰術對決
-            </h1>
-            <p class="text-sm text-gray-300 leading-relaxed">
-                搭載 <span class="text-cyan-400 font-bold">5v5 多 Agent 強化學習大腦 (Q-Learning + 行為樹)</span>。<br>
-                遊戲中的 AI 英雄具備動態走位、自動拉打 (Kiting)、搶補尾刀、團戰走位與購買神裝的能力！
-            </p>
-
-            <div class="grid grid-cols-2 gap-4 my-8">
-                <div onclick="startGame('smart')" class="glass-panel p-6 rounded-2xl border-cyan-500/50 hover:border-cyan-400 cursor-pointer hover:scale-105 transition-all text-left space-y-2 group">
-                    <div class="flex items-center gap-3">
-                        <i class="fa-solid fa-brain text-2xl text-cyan-400 group-hover:animate-pulse"></i>
-                        <h3 class="text-lg font-bold text-white">深度進化模式 (AI 大腦學習)</h3>
-                    </div>
-                    <p class="text-xs text-gray-400">AI 敵我雙方將邊打邊學習，即時優化走位、微操與出裝路線，戰據跨局儲存至硬碟。</p>
-                </div>
-
-                <div onclick="startGame('normal')" class="glass-panel p-6 rounded-2xl border-purple-500/50 hover:border-purple-400 cursor-pointer hover:scale-105 transition-all text-left space-y-2 group">
-                    <div class="flex items-center gap-3">
-                        <i class="fa-solid fa-gamepad text-2xl text-purple-400"></i>
-                        <h3 class="text-lg font-bold text-white">經典競技模式 (預設行為樹)</h3>
-                    </div>
-                    <p class="text-xs text-gray-400">標準 MOBA 戰鬥體驗，AI 使用高強度規則行為樹，適合快速演練與新手熟悉操作。</p>
-                </div>
-            </div>
-
-            <div class="text-xs text-gray-400 bg-slate-900/80 p-4 rounded-xl border border-gray-800 text-left space-y-1">
-                <div class="font-bold text-cyan-300 mb-1"><i class="fa-solid fa-keyboard"></i> 操控指南:</div>
-                <div>• <span class="text-white font-mono">W, A, S, D</span> : 移動英雄</div>
-                <div>• <span class="text-white font-mono">滑鼠右鍵</span> : 指定地點移動 / 攻擊敵人</div>
-                <div>• <span class="text-white font-mono">Q, W, E, R</span> : 釋放英雄技能 (含彈道/AOE預警指標)</div>
-                <div>• <span class="text-white font-mono">D, F</span> : 召喚師技能 (閃現 / 治癒)</div>
-                <div>• <span class="text-white font-mono">滾輪</span> : 縮放視角 | <span class="text-white font-mono">B</span> : 傳送回城</div>
-            </div>
-        </div>
-    </div>
-
-    <!-- 遊戲結束視窗 -->
-    <div id="gameOverModal" class="absolute inset-0 z-50 glass-panel bg-slate-950/90 hidden flex-col items-center justify-center p-6">
-        <div class="text-center space-y-6 max-w-md">
-            <h2 id="gameOverTitle" class="text-6xl font-black tracking-wider text-amber-400 drop-shadow-[0_0_30px_rgba(251,191,36,0.8)]">VICTORY</h2>
-            <p id="gameOverSub" class="text-gray-300 text-sm">藍隊摧毀了敵方核心基座，獲得了榮耀勝利！</p>
-            <button onclick="restartGame()" class="hud-btn px-8 py-3 rounded-xl text-lg font-extrabold text-cyan-300 border-cyan-400 hover:scale-105 transition">
-                返回主選單
-            </button>
-        </div>
-    </div>
-
-    <!-- 神裝商店 Modal -->
-    <div id="shopModal" class="absolute inset-0 z-40 glass-panel bg-slate-950/90 hidden flex items-center justify-center p-6">
-        <div class="w-full max-w-4xl h-[600px] glass-panel border-cyan-500/40 rounded-2xl flex flex-col overflow-hidden">
-            <!-- 標題欄 -->
-            <div class="px-6 py-4 border-b border-gray-800 flex justify-between items-center bg-slate-900/60">
-                <div class="flex items-center gap-3">
-                    <i class="fa-solid fa-store text-amber-400 text-xl"></i>
-                    <h2 class="text-xl font-bold text-white">賽博神裝商店</h2>
-                    <span class="text-xs text-amber-300 font-mono">持有金幣: <span id="shopGoldText" class="font-bold">0</span> G</span>
-                </div>
-                <button onclick="toggleModal('shopModal')" class="text-gray-400 hover:text-white text-xl"><i class="fa-solid fa-xmark"></i></button>
-            </div>
-            <!-- 分類 Tab -->
-            <div class="flex border-b border-gray-800 bg-slate-900/40 px-6">
-                <button onclick="switchShopCategory('atk')" class="shop-tab active px-5 py-3 text-sm font-bold border-b-2 border-cyan-400 text-cyan-400">物理裝備</button>
-                <button onclick="switchShopCategory('matk')" class="shop-tab px-5 py-3 text-sm font-bold border-b-2 border-transparent text-gray-400 hover:text-gray-200">法術裝備</button>
-                <button onclick="switchShopCategory('def')" class="shop-tab px-5 py-3 text-sm font-bold border-b-2 border-transparent text-gray-400 hover:text-gray-200">防禦護甲</button>
-                <button onclick="switchShopCategory('move')" class="shop-tab px-5 py-3 text-sm font-bold border-b-2 border-transparent text-gray-400 hover:text-gray-200">移動與主動</button>
-            </div>
-            <!-- 裝備列表 -->
-            <div class="flex-1 p-6 overflow-y-auto grid grid-cols-2 gap-4" id="shopItemsContainer">
-                <!-- 動態注入裝備卡片 -->
-            </div>
-        </div>
-    </div>
-
-    <!-- 戰況對決 Modal (Scoreboard) -->
-    <div id="scoreboardModal" class="absolute inset-0 z-40 glass-panel bg-slate-950/90 hidden flex items-center justify-center p-6">
-        <div class="w-full max-w-4xl h-[550px] glass-panel border-cyan-500/40 rounded-2xl flex flex-col overflow-hidden">
-            <div class="px-6 py-4 border-b border-gray-800 flex justify-between items-center bg-slate-900/60">
-                <h2 class="text-xl font-bold text-white"><i class="fa-solid fa-trophy text-amber-400 mr-2"></i>即時戰況與裝備統計</h2>
-                <button onclick="toggleModal('scoreboardModal')" class="text-gray-400 hover:text-white text-xl"><i class="fa-solid fa-xmark"></i></button>
-            </div>
-            <div class="flex-1 p-6 overflow-y-auto space-y-6" id="scoreboardContent">
-                <!-- 動態注入藍隊與紅隊英雄數據 -->
-            </div>
-        </div>
-    </div>
-
-    <!-- AI 大腦進化數據 Modal -->
-    <div id="aiBrainModal" class="absolute inset-0 z-40 glass-panel bg-slate-950/90 hidden flex items-center justify-center p-6">
-        <div class="w-full max-w-4xl h-[600px] glass-panel border-purple-500/40 rounded-2xl flex flex-col overflow-hidden">
-            <div class="px-6 py-4 border-b border-gray-800 flex justify-between items-center bg-slate-900/60">
-                <div class="flex items-center gap-2">
-                    <i class="fa-solid fa-brain text-purple-400 text-xl"></i>
-                    <h2 class="text-xl font-bold text-white">Q-Learning 多 Agent AI 大腦數據分析</h2>
-                </div>
-                <button onclick="toggleModal('aiBrainModal')" class="text-gray-400 hover:text-white text-xl"><i class="fa-solid fa-xmark"></i></button>
-            </div>
-            <div class="flex-1 p-6 overflow-y-auto space-y-6">
-                <!-- 大腦狀態統計 -->
-                <div class="grid grid-cols-3 gap-4">
-                    <div class="glass-panel p-4 rounded-xl border-purple-500/30">
-                        <div class="text-xs text-gray-400">走位大腦 Q-Table 狀態數</div>
-                        <div id="qMoveSize" class="text-2xl font-black text-purple-300 mt-1">0</div>
-                    </div>
-                    <div class="glass-panel p-4 rounded-xl border-cyan-500/30">
-                        <div class="text-xs text-gray-400">裝備選擇 Q-Table 狀態數</div>
-                        <div id="qItemSize" class="text-2xl font-black text-cyan-300 mt-1">0</div>
-                    </div>
-                    <div class="glass-panel p-4 rounded-xl border-emerald-500/30">
-                        <div class="text-xs text-gray-400">當前探索率 (Epsilon)</div>
-                        <div id="qEpsilon" class="text-2xl font-black text-emerald-300 mt-1">0.15</div>
-                    </div>
-                </div>
-
-                <!-- 按鈕控制 -->
-                <div class="flex gap-4">
-                    <button onclick="exportAiBrain()" class="hud-btn px-4 py-2 rounded-lg text-xs font-bold text-cyan-300"><i class="fa-solid fa-download mr-1"></i> 匯出 AI 權重 JSON</button>
-                    <button onclick="resetAiBrain()" class="hud-btn px-4 py-2 rounded-lg text-xs font-bold text-rose-400 border-rose-500/40"><i class="fa-solid fa-trash mr-1"></i> 重置 LocalStorage 權重</button>
-                </div>
-
-                <!-- 即時決策日誌 -->
-                <div class="space-y-2">
-                    <h3 class="text-sm font-bold text-gray-300"><i class="fa-solid fa-terminal text-cyan-400 mr-2"></i>AI 即時決策日誌 (Live Agent Log)</h3>
-                    <div id="aiLogBox" class="bg-black/80 font-mono text-xs p-4 rounded-xl h-48 overflow-y-auto border border-gray-800 text-emerald-400 space-y-1">
-                        <div>[System] 強化學習引擎初始化完成...</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- 遊戲邏輯與 Web Audio 聲效腳本 -->
     <script>
-        // ==========================================
-        // 1. Web Audio 聲效合成器 (免外部音效資源)
-        // ==========================================
-        const AudioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        
-        function playSound(type) {
-            if (AudioCtx.state === 'suspended') AudioCtx.resume();
-            const osc = AudioCtx.createOscillator();
-            const gain = AudioCtx.createGain();
-            osc.connect(gain);
-            gain.connect(AudioCtx.destination);
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
 
-            const now = AudioCtx.currentTime;
-            if (type === 'attack') {
-                osc.type = 'triangle';
-                osc.frequency.setValueAtTime(400, now);
-                osc.frequency.exponentialRampToValueAtTime(100, now + 0.1);
-                gain.gain.setValueAtTime(0.2, now);
-                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
-                osc.start(now); osc.stop(now + 0.1);
-            } else if (type === 'skill') {
-                osc.type = 'sawtooth';
-                osc.frequency.setValueAtTime(200, now);
-                osc.frequency.exponentialRampToValueAtTime(800, now + 0.25);
-                gain.gain.setValueAtTime(0.3, now);
-                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
-                osc.start(now); osc.stop(now + 0.25);
-            } else if (type === 'kill') {
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(523.25, now); // C5
-                osc.frequency.setValueAtTime(659.25, now + 0.1); // E5
-                osc.frequency.setValueAtTime(783.99, now + 0.2); // G5
-                gain.gain.setValueAtTime(0.4, now);
-                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
-                osc.start(now); osc.stop(now + 0.4);
-            } else if (type === 'hit') {
-                osc.type = 'square';
-                osc.frequency.setValueAtTime(120, now);
-                gain.gain.setValueAtTime(0.2, now);
-                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
-                osc.start(now); osc.stop(now + 0.08);
-            }
-        }
+        // 遊戲狀態
+        let gameState = "PLAYING"; // PLAYING, WIN
+        let bridgeAngle = 0; // 0 或 90 度
+        let ball = {
+            segment: 0,
+            t: 0, // 0 到 1 之間的路徑插值
+            speed: 0.006,
+            x: 0,
+            y: 0
+        };
 
-        // ==========================================
-        // 2. 遊戲核心數據結構與變數
-        // ==========================================
-        let scene, camera, renderer, controls;
-        let gameMode = 'smart'; // 'smart' 或 'normal'
-        let isGameOver = false;
-        let gameTime = 0;
-        let gameTimerInterval = null;
-
-        let blueKills = 0;
-        let redKills = 0;
-
-        let cameraModeIndex = 0; // 0: Follow, 1: TopDown, 2: Orbit
-        const cameraModes = ['跟隨', '俯瞰戰術', '自由軌道'];
-
-        // 實體容器
-        let entities = []; // 包含英雄、小兵、防禦塔、主堡、Boss
-        let projectiles = []; // 彈道與特效
-        let floatingTexts = [];
-
-        let playerHero = null;
-
-        // 大腦記憶
-        let qMoveTable = JSON.parse(localStorage.getItem('cyber_moba_q_move')) || {};
-        let qItemTable = JSON.parse(localStorage.getItem('cyber_moba_q_item')) || {};
-        const ALPHA = 0.1, GAMMA = 0.85;
-        let EPSILON = 0.15;
-
-        // 按鈕鍵盤狀態
-        const keys = {};
-
-        // 裝備資料庫
-        const SHOP_ITEMS = [
-            // 物攻
-            { id: 'sword_1', cat: 'atk', name: '賽博之鋒', cost: 1200, stats: { atk: 40 }, desc: '基礎物攻提升' },
-            { id: 'sword_2', cat: 'atk', name: '無盡光刃', cost: 2400, stats: { atk: 90 }, desc: '暴擊與高額物理輸出' },
-            { id: 'sword_3', cat: 'atk', name: '破甲電鋸', cost: 2200, stats: { atk: 60, speed: 0.5 }, desc: '物理穿透與攻速加成' },
-
-            // 魔攻
-            { id: 'staff_1', cat: 'matk', name: '離子核心', cost: 1300, stats: { matk: 50 }, desc: '基礎法強提升' },
-            { id: 'staff_2', cat: 'matk', name: '量子毀滅權杖', cost: 2500, stats: { matk: 120 }, desc: '極致法術爆發傷害' },
-
-            // 防禦
-            { id: 'armor_1', cat: 'def', name: '奈米防護甲', cost: 1500, stats: { hp: 500, def: 30 }, desc: '提升血量與物理防禦' },
-            { id: 'armor_2', cat: 'def', name: '泰坦核心盾', cost: 2600, stats: { hp: 1200, def: 60 }, desc: '巨額血量與極致生存' },
-
-            // 移動與主動
-            { id: 'boot_1', cat: 'move', name: '光速戰靴', cost: 800, stats: { speed: 1.2 }, desc: '大幅提升移動速度' },
-            { id: 'zhonya', cat: 'move', name: '凝霜寶珠 (金身)', cost: 2200, stats: { matk: 70, def: 30 }, desc: '主動技能: 免疫所有傷害 2.5 秒' }
+        // 靜態賽道關鍵節點 (Isometric 座標風格)
+        const waypoints = [
+            { x: 100, y: 480 }, // 0: 起點 (右下)
+            { x: 250, y: 400 }, // 1: 底部轉角
+            { x: 250, y: 300 }, // 2: 橋樑入口
+            // 橋樑接合處 (動態)
+            { x: 250, y: 180 }, // 3: 橋樑出口
+            { x: 250, y: 120 }, // 4: 頂部保齡球瓶區 (終點)
         ];
 
-        // ==========================================
-        // 3. Three.js 3D 競技場場景構建
-        // ==========================================
-        function init3DScene() {
-            const container = document.getElementById('canvas-container');
-            scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x050811);
-            scene.fog = new THREE.FogExp2(0x050811, 0.005);
+        // 保齡球瓶
+        let pins = [
+            { x: 240, y: 110, hit: false },
+            { x: 250, y: 105, hit: false },
+            { x: 260, y: 110, hit: false }
+        ];
 
-            camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
-            camera.position.set(0, 60, 50);
-
-            renderer = new THREE.WebGLRenderer({ antialias: true });
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.shadowMap.enabled = true;
-            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-            container.appendChild(renderer.domElement);
-
-            controls = new THREE.OrbitControls(camera, renderer.domElement);
-            controls.enableDamping = true;
-            controls.dampingFactor = 0.05;
-            controls.maxPolarAngle = Math.PI / 2 - 0.05;
-
-            // 光源
-            const ambientLight = new THREE.AmbientLight(0xdbeafe, 0.4);
-            scene.add(ambientLight);
-
-            const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
-            dirLight.position.set(50, 100, 50);
-            dirLight.castShadow = true;
-            dirLight.shadow.mapSize.width = 2048;
-            dirLight.shadow.mapSize.height = 2048;
-            scene.add(dirLight);
-
-            // 地面 (賽博朋克網格)
-            const mapSize = 200;
-            const floorGeo = new THREE.PlaneGeometry(mapSize, mapSize);
-            const floorMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.8 });
-            const floor = new THREE.Mesh(floorGeo, floorMat);
-            floor.rotation.x = -Math.PI / 2;
-            floor.receiveShadow = true;
-            scene.add(floor);
-
-            const grid = new THREE.GridHelper(mapSize, 40, 0x38bdf8, 0x1e293b);
-            grid.position.y = 0.01;
-            scene.add(grid);
-
-            // 主路河道裝飾
-            const riverGeo = new THREE.BoxGeometry(30, 0.1, mapSize);
-            const riverMat = new THREE.MeshBasicMaterial({ color: 0x0284c7, transparent: true, opacity: 0.3 });
-            const river = new THREE.Mesh(riverGeo, riverMat);
-            river.rotation.y = Math.PI / 4;
-            scene.add(river);
-
-            window.addEventListener('resize', onWindowResize);
+        // 點擊旋轉機關
+        function triggerMechanism() {
+            if (gameState === "WIN") {
+                resetGame();
+                return;
+            }
+            bridgeAngle = (bridgeAngle + 90) % 180;
         }
 
-        function onWindowResize() {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        }
-
-        // ==========================================
-        // 4. 實體 (Entity) 類別建立 (英雄、建築、Boss)
-        // ==========================================
-        class Entity {
-            constructor(params) {
-                this.id = params.id || Math.random().toString(36).substr(2, 9);
-                this.name = params.name || 'Entity';
-                this.team = params.team; // 'blue' 或 'red' 或 'neutral'
-                this.type = params.type; // 'hero', 'tower', 'base', 'minion', 'boss'
-                this.role = params.role || 'warrior'; // 'tank', 'assassin', 'mage', 'adc', 'support'
-
-                this.x = params.x || 0;
-                this.z = params.z || 0;
-                this.radius = params.radius || 1.5;
-
-                this.maxHp = params.hp || 1000;
-                this.hp = this.maxHp;
-                this.maxMp = params.mp || 500;
-                this.mp = this.maxMp;
-
-                this.atk = params.atk || 50;
-                this.matk = params.matk || 0;
-                this.def = params.def || 20;
-                this.speed = params.speed || 5.0;
-                this.range = params.range || 3.0;
-
-                this.gold = 0;
-                this.kills = 0;
-                this.deaths = 0;
-                this.items = [];
-
-                this.isDead = false;
-                this.respawnTimer = 0;
-
-                // 技能冷卻
-                this.cd = { q: 0, w: 0, e: 0, r: 0, d: 0, f: 0 };
-
-                // 建立 3D Mesh
-                this.mesh = this.createMesh(params.color || 0x38bdf8);
-                this.mesh.position.set(this.x, 0, this.z);
-                scene.add(this.mesh);
-
-                // 動態頭頂血條 3D Sprite
-                this.hpCanvas = document.createElement('canvas');
-                this.hpCanvas.width = 128; this.hpCanvas.height = 32;
-                this.hpCtx = this.hpCanvas.getContext('2d');
-                this.hpTexture = new THREE.CanvasTexture(this.hpCanvas);
-                const spriteMat = new THREE.SpriteMaterial({ map: this.hpTexture });
-                this.hpSprite = new THREE.Sprite(spriteMat);
-                this.hpSprite.scale.set(4, 1, 1);
-                this.hpSprite.position.y = params.height ? params.height + 1.2 : 3.5;
-                this.mesh.add(this.hpSprite);
-
-                this.updateHpSprite();
-            }
-
-            createMesh(colorHex) {
-                const group = new THREE.Group();
-                let geo, mat;
-
-                if (this.type === 'hero') {
-                    geo = new THREE.CapsuleGeometry(1, 1.5, 4, 8);
-                    mat = new THREE.MeshStandardMaterial({ color: colorHex, roughness: 0.3, metalness: 0.5 });
-                    const body = new THREE.Mesh(geo, mat);
-                    body.position.y = 1.75;
-                    body.castShadow = true;
-                    group.add(body);
-                } else if (this.type === 'tower') {
-                    geo = new THREE.CylinderGeometry(1.5, 2, 8, 8);
-                    mat = new THREE.MeshStandardMaterial({ color: colorHex, metalness: 0.8 });
-                    const tower = new THREE.Mesh(geo, mat);
-                    tower.position.y = 4;
-                    tower.castShadow = true;
-                    group.add(tower);
-                } else if (this.type === 'base') {
-                    geo = new THREE.OctahedronGeometry(4);
-                    mat = new THREE.MeshStandardMaterial({ color: colorHex, wireframe: true });
-                    const base = new THREE.Mesh(geo, mat);
-                    base.position.y = 4;
-                    group.add(base);
-                } else if (this.type === 'minion') {
-                    geo = new THREE.BoxGeometry(1, 1, 1);
-                    mat = new THREE.MeshStandardMaterial({ color: colorHex });
-                    const m = new THREE.Mesh(geo, mat);
-                    m.position.y = 0.5;
-                    m.castShadow = true;
-                    group.add(m);
-                } else if (this.type === 'boss') {
-                    geo = new THREE.DodecahedronGeometry(3);
-                    mat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, roughness: 0.1 });
-                    const boss = new THREE.Mesh(geo, mat);
-                    boss.position.y = 3;
-                    boss.castShadow = true;
-                    group.add(boss);
-                }
-
-                return group;
-            }
-
-            updateHpSprite() {
-                if (!this.hpCtx) return;
-                const ctx = this.hpCtx;
-                ctx.clearRect(0, 0, 128, 32);
-
-                // 背景
-                ctx.fillStyle = 'rgba(0,0,0,0.7)';
-                ctx.fillRect(0, 8, 128, 16);
-
-                // 血條比例
-                const pct = Math.max(0, this.hp / this.maxHp);
-                ctx.fillStyle = this.team === 'blue' ? '#10b981' : (this.team === 'red' ? '#f43f5e' : '#f59e0b');
-                ctx.fillRect(2, 10, 124 * pct, 12);
-
-                // 文字
-                ctx.fillStyle = '#ffffff';
-                ctx.font = 'bold 10px Arial';
-                ctx.textAlign = 'center';
-                ctx.fillText(`${Math.ceil(this.hp)}`, 64, 20);
-
-                this.hpTexture.needsUpdate = true;
-            }
-
-            takeDamage(amount, attacker) {
-                if (this.isDead) return;
-                const actualDmg = Math.max(5, amount * (100 / (100 + this.def)));
-                this.hp -= actualDmg;
-
-                // 飄字傷害特效
-                createFloatingText(Math.ceil(actualDmg).toString(), this.x, 3, this.z, attacker.team === 'blue' ? '#58a6ff' : '#f85149');
-                playSound('hit');
-
-                if (this.hp <= 0) {
-                    this.hp = 0;
-                    this.onDeath(attacker);
-                }
-                this.updateHpSprite();
-            }
-
-            onDeath(killer) {
-                this.isDead = true;
-                this.mesh.visible = false;
-                this.deaths++;
-
-                if (killer) {
-                    killer.kills++;
-                    killer.gold += (this.type === 'hero' ? 300 : (this.type === 'tower' ? 500 : 50));
-                    if (this.type === 'hero') playSound('kill');
-                }
-
-                if (this.team === 'blue') redKills++;
-                else if (this.team === 'red') blueKills++;
-
-                updateHudStats();
-
-                // 英雄死亡復活倒數
-                if (this.type === 'hero') {
-                    this.respawnTimer = 8; // 8秒復活
-                }
-            }
-
-            respawn() {
-                this.isDead = false;
-                this.hp = this.maxHp;
-                this.mp = this.maxMp;
-                this.mesh.visible = true;
-
-                const spawnPos = this.team === 'blue' ? { x: -80, z: 80 } : { x: 80, z: -80 };
-                this.x = spawnPos.x;
-                this.z = spawnPos.z;
-                this.mesh.position.set(this.x, 0, this.z);
-                this.updateHpSprite();
-            }
-        }
-
-        // ==========================================
-        // 5. 飄字傷害與彈道特效系統
-        // ==========================================
-        function createFloatingText(text, x, y, z, colorStr) {
-            const canvas = document.createElement('canvas');
-            canvas.width = 128; canvas.height = 64;
-            const ctx = canvas.getContext('2d');
-            ctx.fillStyle = colorStr;
-            ctx.font = 'black 24px Arial';
-            ctx.textAlign = 'center';
-            ctx.fillText(text, 64, 40);
-
-            const texture = new THREE.CanvasTexture(canvas);
-            const spriteMat = new THREE.SpriteMaterial({ map: texture, transparent: true });
-            const sprite = new THREE.Sprite(spriteMat);
-            sprite.position.set(x, y, z);
-            sprite.scale.set(3, 1.5, 1);
-            scene.add(sprite);
-
-            floatingTexts.push({ sprite: sprite, life: 1.0 });
-        }
-
-        function createProjectile(startX, startZ, targetX, targetZ, colorHex, onHit) {
-            const geo = new THREE.SphereGeometry(0.4, 8, 8);
-            const mat = new THREE.MeshBasicMaterial({ color: colorHex });
-            const mesh = new THREE.Mesh(geo, mat);
-            mesh.position.set(startX, 1.5, startZ);
-            scene.add(mesh);
-
-            projectiles.push({
-                mesh: mesh,
-                targetX: targetX,
-                targetZ: targetZ,
-                speed: 25.0,
-                onHit: onHit
-            });
-        }
-
-        // ==========================================
-        // 6. Q-Learning 強化學習 AI Agent 系統
-        // ==========================================
-        const AI_ACTIONS = ['ADVANCE', 'RETREAT', 'ATTACK_HERO', 'ATTACK_MINION', 'KITE_DODGE'];
-
-        function getAiState(hero) {
-            const hpPct = hero.hp / hero.maxHp > 0.5 ? 'HP_HIGH' : 'HP_LOW';
-            const enemyHero = entities.find(e => e.type === 'hero' && e.team !== hero.team && !e.isDead);
-            let distState = 'FAR';
-            if (enemyHero) {
-                const dist = Math.hypot(enemyHero.x - hero.x, enemyHero.z - hero.z);
-                if (dist < 10) distState = 'CLOSE';
-                else if (dist < 25) distState = 'MID';
-            }
-            return `${hpPct}_${distState}`;
-        }
-
-        function updateAiAgent(hero, delta) {
-            if (hero.isDead) return;
-
-            const state = getAiState(hero);
-
-            if (!qMoveTable[state]) {
-                qMoveTable[state] = { ADVANCE: 0, RETREAT: 0, ATTACK_HERO: 0, ATTACK_MINION: 0, KITE_DODGE: 0 };
-            }
-
-            let action = 'ADVANCE';
-            if (gameMode === 'smart') {
-                if (Math.random() < EPSILON) {
-                    action = AI_ACTIONS[Math.floor(Math.random() * AI_ACTIONS.length)];
-                } else {
-                    let maxQ = -Infinity;
-                    for (let a of AI_ACTIONS) {
-                        if (qMoveTable[state][a] > maxQ) { maxQ = qMoveTable[state][a]; action = a; }
-                    }
-                }
-            } else {
-                // 規則行為樹 (Normal Mode)
-                if (hero.hp / hero.maxHp < 0.3) action = 'RETREAT';
-                else action = 'ADVANCE';
-            }
-
-            // 執行動作
-            const targetBase = hero.team === 'blue' ? { x: 80, z: -80 } : { x: -80, z: 80 };
-            const homeBase = hero.team === 'blue' ? { x: -80, z: 80 } : { x: 80, z: -80 };
-
-            let moveTarget = { x: hero.x, z: hero.z };
-
-            if (action === 'ADVANCE') {
-                moveTarget = targetBase;
-            } else if (action === 'RETREAT') {
-                moveTarget = homeBase;
-            } else if (action === 'ATTACK_HERO') {
-                const oppHero = entities.find(e => e.type === 'hero' && e.team !== hero.team && !e.isDead);
-                if (oppHero) moveTarget = { x: oppHero.x, z: oppHero.z };
-            } else if (action === 'KITE_DODGE') {
-                moveTarget = { x: hero.x + (Math.random() - 0.5) * 10, z: hero.z + (Math.random() - 0.5) * 10 };
-            }
-
-            // 移動計算
-            const dx = moveTarget.x - hero.x;
-            const dz = moveTarget.z - hero.z;
-            const dist = Math.hypot(dx, dz);
-
-            if (dist > 1.5) {
-                hero.x += (dx / dist) * hero.speed * delta;
-                hero.z += (dz / dist) * hero.speed * delta;
-                hero.mesh.position.set(hero.x, 0, hero.z);
-            }
-
-            // 自動攻擊判定
-            const opps = entities.filter(e => e.team !== hero.team && !e.isDead && Math.hypot(e.x - hero.x, e.z - hero.z) <= hero.range);
-            if (opps.length > 0) {
-                const target = opps[0];
-                createProjectile(hero.x, hero.z, target.x, target.z, hero.team === 'blue' ? 0x38bdf8 : 0xf43f5e, () => {
-                    target.takeDamage(hero.atk, hero);
-                });
-            }
-        }
-
-        // ==========================================
-        // 7. 玩家控制與技能釋放 (QWER + DF)
-        // ==========================================
-        function handlePlayerInput(delta) {
-            if (!playerHero || playerHero.isDead) return;
-
-            let moveX = 0, moveZ = 0;
-            if (keys['w'] || keys['W']) moveZ -= 1;
-            if (keys['s'] || keys['S']) moveZ += 1;
-            if (keys['a'] || keys['A']) moveX -= 1;
-            if (keys['d'] || keys['D']) moveX += 1;
-
-            if (moveX !== 0 || moveZ !== 0) {
-                const len = Math.hypot(moveX, moveZ);
-                playerHero.x += (moveX / len) * playerHero.speed * delta;
-                playerHero.z += (moveZ / len) * playerHero.speed * delta;
-                playerHero.mesh.position.set(playerHero.x, 0, playerHero.z);
-            }
-
-            // 相機跟隨
-            if (cameraModeIndex === 0) {
-                camera.position.set(playerHero.x, playerHero.y + 25, playerHero.z + 25);
-                controls.target.set(playerHero.x, 0, playerHero.z);
-            }
-        }
-
-        window.addEventListener('keydown', (e) => {
-            keys[e.key] = true;
-
-            if (playerHero && !playerHero.isDead) {
-                if (e.key === 'q' || e.key === 'Q') castSkill('q');
-                if (e.key === 'w' || e.key === 'W') castSkill('w');
-                if (e.key === 'e' || e.key === 'E') castSkill('e');
-                if (e.key === 'r' || e.key === 'R') castSkill('r');
-                if (e.key === 'd' || e.key === 'D') castSkill('d');
-                if (e.key === 'f' || e.key === 'F') castSkill('f');
-            }
+        window.addEventListener("keydown", (e) => {
+            if (e.key === " " || e.key === "Enter") triggerMechanism();
         });
-        window.addEventListener('keyup', (e) => { keys[e.key] = false; });
+        canvas.addEventListener("click", triggerMechanism);
 
-        function castSkill(key) {
-            if (playerHero.cd[key] > 0) return;
-
-            if (key === 'q') {
-                // 雷霆衝擊 (高額物理 AOE)
-                playerHero.cd.q = 4;
-                playSound('skill');
-                entities.filter(e => e.team !== playerHero.team && !e.isDead && Math.hypot(e.x - playerHero.x, e.z - playerHero.z) < 8).forEach(target => {
-                    target.takeDamage(playerHero.atk * 2.0 + 100, playerHero);
-                });
-                createFloatingText("雷霆衝擊!", playerHero.x, 3, playerHero.z, '#38bdf8');
-            } else if (key === 'w') {
-                // 防護力場 (護盾回復)
-                playerHero.cd.w = 6;
-                playSound('skill');
-                playerHero.hp = Math.min(playerHero.maxHp, playerHero.hp + 300);
-                playerHero.updateHpSprite();
-                createFloatingText("+300 護盾", playerHero.x, 3, playerHero.z, '#10b981');
-            } else if (key === 'e') {
-                // 疾風衝鋒 (閃現/位移)
-                playerHero.cd.e = 5;
-                playSound('skill');
-                playerHero.x += 8;
-                playerHero.z -= 8;
-                playerHero.mesh.position.set(playerHero.x, 0, playerHero.z);
-            } else if (key === 'r') {
-                // 毀滅裁決 (大招)
-                playerHero.cd.r = 12;
-                playSound('skill');
-                entities.filter(e => e.team !== playerHero.team && !e.isDead && Math.hypot(e.x - playerHero.x, e.z - playerHero.z) < 15).forEach(target => {
-                    target.takeDamage(playerHero.atk * 4.0 + 300, playerHero);
-                });
-                createFloatingText("毀滅裁決!", playerHero.x, 4, playerHero.z, '#f43f5e');
-            } else if (key === 'd') {
-                // 閃現
-                playerHero.cd.d = 15;
-                playerHero.x += 12;
-                playerHero.mesh.position.set(playerHero.x, 0, playerHero.z);
-            } else if (key === 'f') {
-                // 治癒
-                playerHero.cd.f = 20;
-                playerHero.hp = Math.min(playerHero.maxHp, playerHero.hp + 500);
-                playerHero.updateHpSprite();
-            }
-
-            updateCdOverlays();
+        function resetGame() {
+            gameState = "PLAYING";
+            bridgeAngle = 0;
+            ball.segment = 0;
+            ball.t = 0;
+            pins.forEach(p => p.hit = false);
         }
 
-        // ==========================================
-        // 8. 遊戲初始化與主 Loop
-        // ==========================================
-        function startGame(mode) {
-            gameMode = mode;
-            document.getElementById('startScreen').style.display = 'none';
+        function update() {
+            if (gameState === "WIN") return;
 
-            init3DScene();
-            spawnArenaEntities();
+            // 紅球前進邏輯
+            ball.t += ball.speed;
 
-            gameTimerInterval = setInterval(() => {
-                if (!isGameOver) {
-                    gameTime++;
-                    const mins = Math.floor(gameTime / 60).toString().padStart(2, '0');
-                    const secs = (gameTime % 60).toString().padStart(2, '0');
-                    document.getElementById('gameTimer').textContent = `${mins}:${secs}`;
+            if (ball.t >= 1) {
+                ball.t = 0;
+                ball.segment++;
 
-                    // 每 15 秒生成小兵
-                    if (gameTime % 15 === 0) spawnMinionWave();
-
-                    // 英雄被動加錢
-                    entities.filter(e => e.type === 'hero').forEach(h => {
-                        h.gold += 10;
-                        if (h === playerHero) updateHudStats();
-                    });
-                }
-            }, 1000);
-
-            animate();
-        }
-
-        function spawnArenaEntities() {
-            // 1. 玩家英雄
-            playerHero = new Entity({ name: '賽博勇士', team: 'blue', type: 'hero', role: 'adc', x: -80, z: 80, hp: 2000, atk: 120, speed: 12.0, color: 0x38bdf8 });
-            entities.push(playerHero);
-
-            // 2. 藍隊 AI 盟友 (4 位)
-            for (let i = 0; i < 4; i++) {
-                entities.push(new Entity({ name: `藍隊AI-${i+1}`, team: 'blue', type: 'hero', x: -75 + i*2, z: 75 - i*2, hp: 1800, atk: 100, speed: 10.0, color: 0x0284c7 }));
-            }
-
-            // 3. 紅隊 AI 敵方 (5 位)
-            for (let i = 0; i < 5; i++) {
-                entities.push(new Entity({ name: `紅隊AI-${i+1}`, team: 'red', type: 'hero', x: 75 - i*2, z: -75 + i*2, hp: 1800, atk: 100, speed: 10.0, color: 0xf43f5e }));
-            }
-
-            // 4. 防禦塔與主堡
-            entities.push(new Entity({ name: '藍方核心主堡', team: 'blue', type: 'base', x: -85, z: 85, hp: 5000, height: 5, color: 0x38bdf8 }));
-            entities.push(new Entity({ name: '紅方核心主堡', team: 'red', type: 'base', x: 85, z: -85, hp: 5000, height: 5, color: 0xf43f5e }));
-
-            entities.push(new Entity({ name: '藍方一塔', team: 'blue', type: 'tower', x: -30, z: 30, hp: 3000, atk: 200, range: 12, color: 0x0284c7 }));
-            entities.push(new Entity({ name: '紅方一塔', team: 'red', type: 'tower', x: 30, z: -30, hp: 3000, atk: 200, range: 12, color: 0xe11d48 }));
-
-            // 5. 河道中立 Boss
-            entities.push(new Entity({ name: '納什巨龍', team: 'neutral', type: 'boss', x: 0, z: 0, hp: 8000, atk: 250, color: 0xf59e0b }));
-        }
-
-        function spawnMinionWave() {
-            entities.push(new Entity({ name: '藍方小兵', team: 'blue', type: 'minion', x: -80, z: 80, hp: 400, atk: 30, speed: 6.0, color: 0x38bdf8 }));
-            entities.push(new Entity({ name: '紅方小兵', team: 'red', type: 'minion', x: 80, z: -80, hp: 400, atk: 30, speed: 6.0, color: 0xf43f5e }));
-        }
-
-        let clock = new THREE.Clock();
-        function animate() {
-            requestAnimationFrame(animate);
-            const delta = clock.getDelta();
-
-            if (!isGameOver) {
-                handlePlayerInput(delta);
-
-                // 更新所有 AI 與實體
-                entities.forEach(e => {
-                    if (e.type === 'hero' && e !== playerHero) {
-                        updateAiAgent(e, delta);
-                    }
-
-                    // 死亡復活計算
-                    if (e.isDead && e.respawnTimer > 0) {
-                        e.respawnTimer -= delta;
-                        if (e.respawnTimer <= 0) e.respawn();
-                    }
-
-                    // 技能 CD 遞減
-                    for (let k in e.cd) {
-                        if (e.cd[k] > 0) e.cd[k] = Math.max(0, e.cd[k] - delta);
-                    }
-                });
-
-                // 更新彈道特效
-                for (let i = projectiles.length - 1; i >= 0; i--) {
-                    const p = projectiles[i];
-                    const dx = p.targetX - p.mesh.position.x;
-                    const dz = p.targetZ - p.mesh.position.z;
-                    const dist = Math.hypot(dx, dz);
-
-                    if (dist < 1.0) {
-                        p.onHit();
-                        scene.remove(p.mesh);
-                        projectiles.splice(i, 1);
-                    } else {
-                        p.mesh.position.x += (dx / dist) * p.speed * delta;
-                        p.mesh.position.z += (dz / dist) * p.speed * delta;
+                // 檢查橋樑是否正確連接 (當球到達第 2 段轉 3 段時)
+                if (ball.segment === 2) {
+                    // 如果橋樑角度為 0 (接通狀態)，繼續通過；否則掉落重來
+                    if (bridgeAngle !== 0) {
+                        ball.segment = 0; // 錯覺斷開，回到起點
+                        ball.t = 0;
                     }
                 }
 
-                // 更新飄字
-                for (let i = floatingTexts.length - 1; i >= 0; i--) {
-                    const ft = floatingTexts[i];
-                    ft.life -= delta;
-                    ft.sprite.position.y += delta * 2;
-                    if (ft.life <= 0) {
-                        scene.remove(ft.sprite);
-                        floatingTexts.splice(i, 1);
-                    }
+                // 到達終點撞倒球瓶
+                if (ball.segment >= 3) {
+                    gameState = "WIN";
+                    pins.forEach(p => p.hit = true);
                 }
-
-                // 更新 CD 顯示 UI
-                updateCdOverlays();
-                renderMinimap();
-                checkWinConditions();
             }
 
-            controls.update();
-            renderer.render(scene, camera);
+            // 計算目前紅球座標
+            let p1 = waypoints[Math.min(ball.segment, waypoints.length - 1)];
+            let p2 = waypoints[Math.min(ball.segment + 1, waypoints.length - 1)];
+
+            ball.x = p1.x + (p2.x - p1.x) * ball.t;
+            ball.y = p1.y + (p2.y - p1.y) * ball.t;
         }
 
-        // ==========================================
-        // 9. UI 互動與輔助面板 (商店, Scoreboard, AI Log)
-        // ==========================================
-        function updateHudStats() {
-            if (!playerHero) return;
-            document.getElementById('playerHpBar').style.width = `${(playerHero.hp / playerHero.maxHp) * 100}%`;
-            document.getElementById('playerHpText').textContent = `${Math.ceil(playerHero.hp)} / ${playerHero.maxHp}`;
-            document.getElementById('playerGold').textContent = playerHero.gold;
-            document.getElementById('shopGoldText').textContent = playerHero.gold;
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            document.getElementById('blueKills').textContent = blueKills;
-            document.getElementById('redKills').textContent = redKills;
+            // 1. 繪製極簡背景柱與賽道 (影片經典黃色建築)
+            ctx.fillStyle = "#eab308"; // 主黃色
+            ctx.strokeStyle = "#ca8a04";
+            ctx.lineWidth = 4;
 
-            document.getElementById('statAtk').textContent = playerHero.atk;
-            document.getElementById('statMatk').textContent = playerHero.matk;
-            document.getElementById('statDef').textContent = playerHero.def;
-            document.getElementById('statSpeed').textContent = playerHero.speed.toFixed(1);
-        }
+            // 底部賽道
+            ctx.beginPath();
+            ctx.moveTo(80, 500);
+            ctx.lineTo(270, 410);
+            ctx.lineTo(270, 290);
+            ctx.lineTo(230, 290);
+            ctx.lineTo(230, 390);
+            ctx.lineTo(80, 460);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
 
-        function updateCdOverlays() {
-            if (!playerHero) return;
-            ['q', 'w', 'e', 'r', 'd', 'f'].forEach(k => {
-                const elem = document.getElementById(`cd-${k}`);
-                if (elem) {
-                    if (playerHero.cd[keyToSkill(k)] > 0) {
-                        elem.classList.remove('hidden');
-                        elem.textContent = `${Math.ceil(playerHero.cd[keyToSkill(k)])}s`;
-                    } else {
-                        elem.classList.add('hidden');
-                    }
-                }
-            });
-        }
-        function keyToSkill(k) { return k; }
+            // 頂部賽道與終點塔
+            ctx.beginPath();
+            ctx.moveTo(230, 190);
+            ctx.lineTo(270, 190);
+            ctx.lineTo(270, 90);
+            ctx.lineTo(230, 90);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
 
-        function renderMinimap() {
-            const canvas = document.getElementById('minimapCanvas');
-            const ctx = canvas.getContext('2d');
-            ctx.clearRect(0, 0, 180, 180);
+            // 2. 繪製錯覺旋轉橋樑 (藍色獨立組件)
+            ctx.save();
+            ctx.translate(250, 240);
+            ctx.rotate((bridgeAngle * Math.PI) / 180);
 
-            // 繪製地圖實體圖標
-            entities.forEach(e => {
-                if (e.isDead) return;
-                const mapX = ((e.x + 100) / 200) * 180;
-                const mapY = ((e.z + 100) / 200) * 180;
+            ctx.fillStyle = "#0284c7"; // 藍色機關
+            ctx.strokeStyle = "#0369a1";
+            ctx.lineWidth = 3;
 
-                ctx.fillStyle = e.team === 'blue' ? '#38bdf8' : (e.team === 'red' ? '#f43f5e' : '#f59e0b');
+            ctx.fillRect(-20, -40, 40, 80);
+            ctx.strokeRect(-20, -40, 40, 80);
+
+            ctx.restore();
+
+            // 3. 繪製保齡球瓶
+            pins.forEach(p => {
+                ctx.fillStyle = p.hit ? "#94a3b8" : "#ffffff";
                 ctx.beginPath();
-                ctx.arc(mapX, mapY, e.type === 'hero' ? 4 : 2, 0, Math.PI * 2);
+                ctx.arc(p.x, p.y + (p.hit ? 10 : 0), 6, 0, Math.PI * 2);
                 ctx.fill();
+                ctx.strokeStyle = "#ef4444";
+                ctx.lineWidth = 2;
+                ctx.stroke();
             });
-        }
 
-        function toggleModal(id) {
-            const modal = document.getElementById(id);
-            if (modal.classList.contains('hidden')) {
-                modal.classList.remove('hidden');
-                modal.classList.add('flex');
-                if (id === 'shopModal') renderShopItems();
-                if (id === 'scoreboardModal') renderScoreboard();
-                if (id === 'aiBrainModal') updateAiBrainUI();
-            } else {
-                modal.classList.add('hidden');
-                modal.classList.remove('flex');
+            // 4. 繪製紅色彈跳小球
+            ctx.fillStyle = "#ef4444"; // 影片經典紅球
+            ctx.beginPath();
+            ctx.arc(ball.x, ball.y, 11, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = "#ffffff";
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // 5. 破關 Victory 提示
+            if (gameState === "WIN") {
+                ctx.fillStyle = "rgba(15, 23, 42, 0.75)";
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                ctx.fillStyle = "#fef08a";
+                ctx.font = "bold 28px sans-serif";
+                ctx.textAlign = "center";
+                ctx.fillText("🎉 完美通關！", canvas.width / 2, canvas.height / 2 - 10);
+
+                ctx.fillStyle = "#ffffff";
+                ctx.font = "14px sans-serif";
+                ctx.fillText("點擊或按空白鍵重新挑戰", canvas.width / 2, canvas.height / 2 + 30);
+                ctx.textAlign = "left";
             }
         }
 
-        function switchShopCategory(cat) {
-            renderShopItems(cat);
+        function gameLoop() {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
         }
 
-        function renderShopItems(cat = 'atk') {
-            const container = document.getElementById('shopItemsContainer');
-            container.innerHTML = '';
-
-            SHOP_ITEMS.filter(item => item.cat === cat).forEach(item => {
-                const card = document.createElement('div');
-                card.className = 'glass-panel p-4 rounded-xl border-cyan-500/30 flex justify-between items-center hover:border-cyan-400';
-                card.innerHTML = `
-                    <div>
-                        <div class="font-bold text-amber-300 text-sm">${item.name}</div>
-                        <div class="text-xs text-gray-400">${item.desc}</div>
-                        <div class="text-xs font-bold text-emerald-400 mt-1">${item.cost} G</div>
-                    </div>
-                    <button onclick="buyItem('${item.id}')" class="hud-btn px-3 py-1.5 rounded-lg text-xs font-bold text-cyan-300">購買</button>
-                `;
-                container.appendChild(card);
-            });
-        }
-
-        function buyItem(itemId) {
-            const item = SHOP_ITEMS.find(i => i.id === itemId);
-            if (playerHero && playerHero.gold >= item.cost) {
-                playerHero.gold -= item.cost;
-                if (item.stats.atk) playerHero.atk += item.stats.atk;
-                if (item.stats.matk) playerHero.matk += item.stats.matk;
-                if (item.stats.def) playerHero.def += item.stats.def;
-                if (item.stats.hp) { playerHero.maxHp += item.stats.hp; playerHero.hp += item.stats.hp; }
-                if (item.stats.speed) playerHero.speed += item.stats.speed;
-
-                updateHudStats();
-                createFloatingText(`獲得 ${item.name}!`, playerHero.x, 3, playerHero.z, '#f59e0b');
-            }
-        }
-
-        function renderScoreboard() {
-            const container = document.getElementById('scoreboardContent');
-            container.innerHTML = '';
-
-            const blueHeroes = entities.filter(e => e.team === 'blue' && e.type === 'hero');
-            const redHeroes = entities.filter(e => e.team === 'red' && e.type === 'hero');
-
-            let html = `<div class="space-y-4">
-                <h3 class="text-cyan-400 font-bold border-b border-cyan-500/30 pb-2">藍隊 (我方)</h3>`;
-            blueHeroes.forEach(h => {
-                html += `<div class="flex justify-between items-center text-xs bg-slate-900/60 p-2 rounded-lg">
-                    <span class="font-bold text-white">${h.name}</span>
-                    <span class="text-gray-300">KDA: ${h.kills} / ${h.deaths} / 0</span>
-                    <span class="text-amber-400 font-bold">${h.gold} G</span>
-                </div>`;
-            });
-
-            html += `<h3 class="text-rose-400 font-bold border-b border-rose-500/30 pb-2 mt-6">紅隊 (敵方)</h3>`;
-            redHeroes.forEach(h => {
-                html += `<div class="flex justify-between items-center text-xs bg-slate-900/60 p-2 rounded-lg">
-                    <span class="font-bold text-white">${h.name}</span>
-                    <span class="text-gray-300">KDA: ${h.kills} / ${h.deaths} / 0</span>
-                    <span class="text-amber-400 font-bold">${h.gold} G</span>
-                </div>`;
-            });
-
-            html += `</div>`;
-            container.innerHTML = html;
-        }
-
-        function updateAiBrainUI() {
-            document.getElementById('qMoveSize').textContent = Object.keys(qMoveTable).length;
-            document.getElementById('qItemSize').textContent = Object.keys(qItemTable).length;
-        }
-
-        function cycleCameraMode() {
-            cameraModeIndex = (cameraModeIndex + 1) % cameraModes.length;
-            document.getElementById('camModeBtn').innerHTML = `<i class="fa-solid fa-camera"></i> 視角: ${cameraModes[cameraModeIndex]}`;
-
-            if (cameraModeIndex === 1) {
-                // TopDown
-                camera.position.set(0, 110, 1);
-                controls.target.set(0, 0, 0);
-            }
-        }
-
-        function checkWinConditions() {
-            const blueBase = entities.find(e => e.type === 'base' && e.team === 'blue');
-            const redBase = entities.find(e => e.type === 'base' && e.team === 'red');
-
-            if (redBase && redBase.hp <= 0) endGame(true);
-            if (blueBase && blueBase.hp <= 0) endGame(false);
-        }
-
-        function endGame(isWin) {
-            isGameOver = true;
-            clearInterval(gameTimerInterval);
-            const modal = document.getElementById('gameOverModal');
-            modal.classList.remove('hidden');
-            modal.classList.add('flex');
-
-            if (isWin) {
-                document.getElementById('gameOverTitle').textContent = 'VICTORY';
-                document.getElementById('gameOverTitle').className = 'text-6xl font-black text-cyan-400 drop-shadow-[0_0_30px_rgba(56,189,248,0.8)]';
-                document.getElementById('gameOverSub').textContent = '藍隊順利攻陷敵人基座，取得了終極戰術勝利！';
-            } else {
-                document.getElementById('gameOverTitle').textContent = 'DEFEAT';
-                document.getElementById('gameOverTitle').className = 'text-6xl font-black text-rose-500 drop-shadow-[0_0_30px_rgba(244,63,94,0.8)]';
-                document.getElementById('gameOverSub').textContent = '藍方基座遭到摧毀，請調整戰術後再次挑戰！';
-            }
-
-            // 儲存 AI 大腦到 LocalStorage
-            localStorage.setItem('cyber_moba_q_move', JSON.stringify(qMoveTable));
-        }
-
-        function restartGame() {
-            window.location.reload();
-        }
-
-        function exportAiBrain() {
-            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(qMoveTable));
-            const downloadAnchor = document.createElement('a');
-            downloadAnchor.setAttribute("href", dataStr);
-            downloadAnchor.setAttribute("download", "cyber_moba_ai_brain.json");
-            document.body.appendChild(downloadAnchor);
-            downloadAnchor.click();
-            downloadAnchor.remove();
-        }
-
-        function resetAiBrain() {
-            localStorage.removeItem('cyber_moba_q_move');
-            localStorage.removeItem('cyber_moba_q_item');
-            qMoveTable = {};
-            qItemTable = {};
-            updateAiBrainUI();
-        }
+        requestAnimationFrame(gameLoop);
     </script>
 </body>
 </html>
